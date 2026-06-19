@@ -1,0 +1,6 @@
+{
+  "name": "كراس المالية الرقمي للمخيم الكشفي",
+  "description": "كراس مالية رقمي متكامل مخصص للمخيمات الكشفية التونسية لإدارة المداخيل والمصاريف والميزانية التقديرية بدعم كامل للعمل دون اتصال بالإنترنت والميزات الذكية",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
