@@ -233,7 +233,7 @@ export default function App() {
 
     const requiresApproval = expAmount > (campSetup?.spendingLimitWithoutApproval ?? 100);
     const isApprovalAuto = !requiresApproval || currentUser?.role === "treasurer";
-    const finalInvoiceStatus = expInvoiceImage ? "existing" : "missing";
+    const finalInvoiceStatus = expInvoiceImage ? "existing" : expInvoiceStatus;
 
     const expId = `exp-man-${Date.now()}`;
     const existingSetup = campSetup || EMPTY_CAMP_SETUP;
