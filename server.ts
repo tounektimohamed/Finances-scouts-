@@ -1,8 +1,11 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { generateReceiptPDF } from "./src/lib/pdfReceipt";
+import { sendReceiptViaWhatsApp } from "./src/lib/whatsapp";
+import { db } from "./src/lib/firebase";
+import { getDoc, doc } from "firebase/firestore";
 
 dotenv.config();
 
@@ -242,12 +245,6 @@ app.post("/api/send-receipt", async (req, res) => {
   }
 
   try {
-    const { generateReceiptPDF } = await import("./src/lib/pdfReceipt.ts");
-    const { sendReceiptViaWhatsApp } = await import("./src/lib/whatsapp.ts");
-
-    const { db } = await import("./src/lib/firebase.ts");
-    const { getDoc, doc } = await import("firebase/firestore");
-
     const incSnap = await getDoc(doc(db, "incomes", incomeId));
     if (!incSnap.exists()) {
       return res.status(404).json({ error: "Income not found" });
@@ -272,11 +269,21 @@ app.post("/api/send-receipt", async (req, res) => {
 // Serve frontend assets or configure Vite dev mode middleware
 async function setupServer() {
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (err: any) {
+      console.warn("Vite dev server unavailable, serving static fallback:", err.message);
+      const distPath = path.join(process.cwd(), "dist");
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    }
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
