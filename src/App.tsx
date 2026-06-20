@@ -45,8 +45,7 @@ export default function App() {
     const cached = localStorage.getItem("scout_current_user");
     return cached ? JSON.parse(cached) : null;
   });
-  const [usernameInput, setUsernameInput] = useState("");
-  const [passwordInput, setPasswordInput] = useState("");
+  const [selectedRole, setSelectedRole] = useState("");
   const [loginError, setLoginError] = useState("");
 
   const { setup: campSetup, saveCampSetup } = useCampSetup();
@@ -122,21 +121,19 @@ export default function App() {
     e.preventDefault();
     setLoginError("");
 
-    if (passwordInput !== "1925" && passwordInput !== "1957") {
-      setLoginError(locale === "ar" ? "كلمة المرور غير صحيحة. يرجى إدخال 1925 أو 1957 للتجربة القيادية." : "Code PIN erroné. Utilisez 1925 ou 1957 pour tester.");
+    if (!selectedRole) {
+      setLoginError(locale === "ar" ? "يرجى اختيار الحساب القيادي" : "Veuillez sélectionner un rôle");
       return;
     }
 
-    const selectedDemUser = DEMO_USERS.find(u => u.name.includes(usernameInput) || u.role === usernameInput);
+    const selectedDemUser = DEMO_USERS.find(u => u.id === selectedRole);
     if (selectedDemUser) {
       setCurrentUser(selectedDemUser);
-      setUsernameInput("");
-      setPasswordInput("");
+      setSelectedRole("");
     } else {
-      const defaultUser: User = { id: "u-custom", name: usernameInput || "قائد كشفي", role: "treasurer" };
+      const defaultUser: User = { id: "u-custom", name: selectedRole, role: "treasurer" };
       setCurrentUser(defaultUser);
-      setUsernameInput("");
-      setPasswordInput("");
+      setSelectedRole("");
     }
   };
 
@@ -501,39 +498,24 @@ export default function App() {
           <div className="bg-white dark:bg-zinc-900 py-8 px-4 shadow-xl rounded-3xl sm:px-10 border border-amber-100 dark:border-zinc-800 space-y-6">
             
             <div className="bg-amber-55 border border-amber-200 p-4 rounded-xl text-xs space-y-2 block">
-              <p className="font-bold text-amber-900 text-center">🔐 بيانات الدخول التجريبية (إكليل القيادة) :</p>
-              <div className="space-y-1 font-semibold text-zinc-700 text-right">
-                <p>• اختر الدور / الحساب المناسب للتجربة.</p>
-                <p>• كلمة المرور الموحدة لأي دور كشفي هي: <span className="font-black text-amber-700 underline font-mono">1925</span></p>
-                <p>أو كود الفوج المعتمد التأسيسي بالتونسية: <span className="font-black text-amber-700 underline font-mono">1957</span></p>
-              </div>
+              <p className="font-bold text-amber-900 text-center">🔐 حدد الحساب للدخول :</p>
+              <p className="font-semibold text-zinc-700 text-right text-3xs">{locale === "ar" ? "اختر الدور المناسب للدخول إلى دفتر المالية" : "Choisissez votre rôle pour accéder au registre"}</p>
             </div>
 
             <form className="space-y-4 text-xs font-semibold" onSubmit={handleLoginSubmit}>
               <div>
-                <label className="block text-zinc-650 dark:text-zinc-300 mb-1.5">{locale === "ar" ? "اختر الحساب القيادي المعني بالتدقيق" : "Rôle / Compte d'accès"}</label>
+                <label className="block text-zinc-650 dark:text-zinc-300 mb-1.5">{locale === "ar" ? "اختر الحساب القيادي المعني" : "Rôle / Compte d'accès"}</label>
                 <select 
                   className="w-full px-3 py-2 border dark:border-zinc-805 rounded-xl bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-200 focus:outline-emerald-800"
-                  value={usernameInput}
-                  onChange={(e) => setUsernameInput(e.target.value)}
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
                   required
                 >
                   <option value="">-- اختر الحساب الكشفي المعين --</option>
-                  <option value="أمين المال">أمين المال (كامل الصلاحيات)</option>
-                  <option value="قائد النشاط">قائد النشاط (عرض وموافقات)</option>
+                  {DEMO_USERS.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-zinc-650 dark:text-zinc-300 mb-1.5">{locale === "ar" ? "رمز المرور السري (كود الأمان)" : "Code PIN d'accès"}</label>
-                <input 
-                  type="password"
-                  className="w-full px-3 py-2 border dark:border-zinc-805 rounded-xl bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-200 focus:outline-emerald-800 tracking-widest text-center"
-                  placeholder="••••"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  required
-                />
               </div>
 
               {loginError && (
@@ -546,7 +528,7 @@ export default function App() {
                 type="submit"
                 className="w-full bg-emerald-900 hover:bg-emerald-800 text-amber-50 font-black py-2.5 rounded-xl text-center transition shadow-lg outline-none"
               >
-                {locale === "ar" ? "تأكيد الهوية والدخول للدفتر الكشفي" : "Confirmer & Ouvrir le registre"}
+                {locale === "ar" ? "دخول إلى دفتر المالية الكشفي" : "Accéder au registre"}
               </button>
             </form>
 
