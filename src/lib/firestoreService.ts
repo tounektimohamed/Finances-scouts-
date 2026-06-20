@@ -188,11 +188,31 @@ export function useTroopImages() {
   }, []);
 
   const saveStamp = useCallback(async (base64: string | null) => {
+    if (base64 && BASE64_REGEX.test(base64)) {
+      try {
+        const url = await uploadImage(base64, `troop/stamp-${Date.now()}`);
+        await setDoc(doc(db, "troop", "images"), { stamp: url, signature }, { merge: true });
+        setStamp(url);
+        return;
+      } catch (e) {
+        console.warn("Stamp upload failed, storing base64:", e);
+      }
+    }
     await setDoc(doc(db, "troop", "images"), { stamp: base64, signature }, { merge: true });
     setStamp(base64);
   }, [signature]);
 
   const saveSignature = useCallback(async (base64: string | null) => {
+    if (base64 && BASE64_REGEX.test(base64)) {
+      try {
+        const url = await uploadImage(base64, `troop/signature-${Date.now()}`);
+        await setDoc(doc(db, "troop", "images"), { stamp, signature: url }, { merge: true });
+        setSignature(url);
+        return;
+      } catch (e) {
+        console.warn("Signature upload failed, storing base64:", e);
+      }
+    }
     await setDoc(doc(db, "troop", "images"), { stamp, signature: base64 }, { merge: true });
     setSignature(base64);
   }, [stamp]);
@@ -208,4 +228,28 @@ export async function uploadImage(base64: string, path: string): Promise<string>
 
 export async function removeImage(path: string) {
   try { await deleteObject(ref(storage, path)); } catch {}
+}
+
+const BASE64_REGEX = /^data:image\/\w+;base64,/;
+
+export async function uploadBase64Fields<T extends Record<string, any>>(
+  obj: T,
+  pathPrefix: string,
+  fields: (keyof T)[]
+): Promise<T> {
+  const result = { ...obj };
+  for (const field of fields) {
+    const value = result[field];
+    if (typeof value === "string" && BASE64_REGEX.test(value)) {
+      const ts = Date.now();
+      const storagePath = `${pathPrefix}/${String(field)}-${ts}`;
+      try {
+        const url = await uploadImage(value, storagePath);
+        (result as any)[field] = url;
+      } catch (e) {
+        console.warn(`Failed to upload ${String(field)} to Storage, keeping base64:`, e);
+      }
+    }
+  }
+  return result;
 }
