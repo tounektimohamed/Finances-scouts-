@@ -2,21 +2,26 @@ import React, { useState, useEffect } from "react";
 import { User, Expense, Income, Scout, CampSetup, ExpenseCategoryCode, IncomeType } from "./types";
 import { 
   DEMO_USERS, 
-  DEFAULT_CAMP_SETUP, 
+  DEFAULT_CAMP_SETUP,
   EMPTY_CAMP_SETUP,
-  INITIAL_SCOUTS, 
-  INITIAL_INCOMES, 
-  INITIAL_EXPENSES,
   CATEGORIES_LIST
 } from "./initialData";
 import { formatTND, formatDate, calculateCampDays } from "./utils/helpers";
+
+import {
+  useCampSetup,
+  useScoutsCollection,
+  useIncomesCollection,
+  useExpensesCollection,
+  useCategories,
+  useTroopImages,
+} from "./lib/firestoreService";
 
 const INCOME_REASONS = [
   { code: "camp_participation", labelAr: "اشتراك مخيم", labelFr: "Participation au camp" },
   { code: "grant", labelAr: "منحة", labelFr: "Subvention" }
 ];
 
-// Sub-components
 import DashboardOverview from "./components/DashboardOverview";
 import TransactionsList from "./components/TransactionsList";
 import ScoutManager from "./components/ScoutManager";
@@ -25,7 +30,6 @@ import CampSettings from "./components/CampSettings";
 import ReportExports from "./components/ReportExports";
 import ReceiptModal from "./components/ReceiptModal";
 
-// Icons
 import { 
   Compass, LayoutDashboard, Landmark, Coins, FileCheck2, 
   Sparkles, Sliders, Moon, Sun, Languages, LogOut, ArrowRightLeft,
@@ -33,14 +37,10 @@ import {
 } from "lucide-react";
 
 export default function App() {
-  // -------------------------------------------------------------
-  // STATE MANAGEMENT WITH LOCAL PERSISTENCE (OFFLINE RELIABLE)
-  // -------------------------------------------------------------
   const [locale, setLocale] = useState<"ar" | "fr">("ar");
   const [darkMode, setDarkMode] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("dashboard");
 
-  // User / Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const cached = localStorage.getItem("scout_current_user");
     return cached ? JSON.parse(cached) : null;
@@ -49,45 +49,18 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState("");
 
-  // Ledger state variables
-  const [campSetup, setCampSetup] = useState<CampSetup>(() => {
-    const cached = localStorage.getItem("scout_camp_setup");
-    return cached ? JSON.parse(cached) : EMPTY_CAMP_SETUP;
-  });
-  const [scouts, setScouts] = useState<Scout[]>(() => {
-    const cached = localStorage.getItem("scout_scouts");
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [incomes, setIncomes] = useState<Income[]>(() => {
-    const cached = localStorage.getItem("scout_incomes");
-    return cached ? JSON.parse(cached) : [];
-  });
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const cached = localStorage.getItem("scout_expenses");
-    return cached ? JSON.parse(cached) : [];
-  });
+  const { setup: campSetup, saveCampSetup } = useCampSetup();
+  const { scouts, upsertScout, updateScout } = useScoutsCollection();
+  const { incomes, upsertIncome, updateIncome } = useIncomesCollection();
+  const { expenses, upsertExpense, updateExpense } = useExpensesCollection();
+  const { categories, saveCategories } = useCategories();
+  const { stamp: troopStamp, signature: troopSignature, saveStamp: setTroopStamp, saveSignature: setTroopSignature } = useTroopImages();
 
-  const [categories, setCategories] = useState<{ code: string; labelAr: string; labelFr: string; emoji: string }[]>(() => {
-    const cached = localStorage.getItem("scout_categories_v2");
-    return cached ? JSON.parse(cached) : CATEGORIES_LIST;
-  });
-
-  const [troopStamp, setTroopStamp] = useState<string | null>(() => {
-    return localStorage.getItem("scout_troop_stamp") || null;
-  });
-
-  const [troopSignature, setTroopSignature] = useState<string | null>(() => {
-    return localStorage.getItem("scout_troop_signature") || null;
-  });
-
-  // Receipt Modal State
   const [selectedReceiptIncome, setSelectedReceiptIncome] = useState<Income | null>(null);
 
-  // Modals state for quick transaction forms
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
-  // Quick Expense Form Values
   const [expCategory, setExpCategory] = useState<ExpenseCategoryCode>("nutrition");
   const [expDesc, setExpDesc] = useState("");
   const [expAmount, setExpAmount] = useState<number>(0);
@@ -100,7 +73,6 @@ export default function App() {
   const [expNote, setExpNote] = useState("");
   const [expInvoiceCode, setExpInvoiceCode] = useState("");
 
-  // Generate unique invoice code when showExpenseModal is toggled
   useEffect(() => {
     if (showExpenseModal && !expInvoiceCode) {
       let nextNum = 1;
@@ -118,7 +90,6 @@ export default function App() {
     }
   }, [showExpenseModal, expenses, expInvoiceCode]);
 
-  // Quick Income Form Values
   const [incType, setIncType] = useState<IncomeType>("participation");
   const [incAmount, setIncAmount] = useState<number>(0);
   const [incPayer, setIncPayer] = useState("");
@@ -129,43 +100,6 @@ export default function App() {
   const [incPayerPhone, setIncPayerPhone] = useState("");
   const [incSelectedScoutId, setIncSelectedScoutId] = useState("");
 
-  // Save changes to localStorage on any state modification
-  useEffect(() => {
-    localStorage.setItem("scout_camp_setup", JSON.stringify(campSetup));
-  }, [campSetup]);
-
-  useEffect(() => {
-    localStorage.setItem("scout_scouts", JSON.stringify(scouts));
-  }, [scouts]);
-
-  useEffect(() => {
-    localStorage.setItem("scout_incomes", JSON.stringify(incomes));
-  }, [incomes]);
-
-  useEffect(() => {
-    localStorage.setItem("scout_expenses", JSON.stringify(expenses));
-  }, [expenses]);
-
-  useEffect(() => {
-    localStorage.setItem("scout_categories_v2", JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    if (troopStamp) {
-      localStorage.setItem("scout_troop_stamp", troopStamp);
-    } else {
-      localStorage.removeItem("scout_troop_stamp");
-    }
-  }, [troopStamp]);
-
-  useEffect(() => {
-    if (troopSignature) {
-      localStorage.setItem("scout_troop_signature", troopSignature);
-    } else {
-      localStorage.removeItem("scout_troop_signature");
-    }
-  }, [troopSignature]);
-
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem("scout_current_user", JSON.stringify(currentUser));
@@ -174,7 +108,6 @@ export default function App() {
     }
   }, [currentUser]);
 
-  // Apply dark mode styling details
   useEffect(() => {
     const root = window.document.documentElement;
     if (darkMode) {
@@ -184,78 +117,10 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Force clean slate for first load to remove any legacy dummy/mock data
-  useEffect(() => {
-    const isCleaned = localStorage.getItem("scout_ledger_force_cleaned_final_v6");
-    if (!isCleaned) {
-      localStorage.removeItem("scout_scouts");
-      localStorage.removeItem("scout_incomes");
-      localStorage.removeItem("scout_expenses");
-      localStorage.removeItem("scout_camp_setup");
-      localStorage.removeItem("scout_categories_v2");
-      localStorage.removeItem("scout_troop_stamp");
-      localStorage.removeItem("scout_troop_signature");
-      localStorage.removeItem("scout_current_user");
-      
-      // Update states
-      setCampSetup(EMPTY_CAMP_SETUP);
-      setScouts([]);
-      setIncomes([]);
-      setExpenses([]);
-      setTroopStamp(null);
-      setTroopSignature(null);
-      setCurrentUser(null);
-      
-      localStorage.setItem("scout_ledger_force_cleaned_final_v6", "true");
-    }
-  }, [EMPTY_CAMP_SETUP]);
-
-  // -------------------------------------------------------------
-  // CONTROLLER LOGIC: CRUD & FINANCE MUTATIONS
-  // -------------------------------------------------------------
-
-  // Reset demo databases
-  const handleResetDatabases = () => {
-    localStorage.setItem("scout_camp_setup", JSON.stringify(DEFAULT_CAMP_SETUP));
-    localStorage.setItem("scout_scouts", JSON.stringify(INITIAL_SCOUTS));
-    localStorage.setItem("scout_incomes", JSON.stringify(INITIAL_INCOMES));
-    localStorage.setItem("scout_expenses", JSON.stringify(INITIAL_EXPENSES));
-    localStorage.setItem("scout_categories_v2", JSON.stringify(CATEGORIES_LIST));
-    localStorage.removeItem("scout_troop_stamp");
-
-    setCampSetup(DEFAULT_CAMP_SETUP);
-    setScouts(INITIAL_SCOUTS);
-    setIncomes(INITIAL_INCOMES);
-    setExpenses(INITIAL_EXPENSES);
-    setCategories(CATEGORIES_LIST);
-    setTroopStamp(null);
-    alert(locale === "ar" ? "تم بنجاح تحميل البيانات التجريبية الشاملة!" : "Données de démonstration chargées avec succès !");
-  };
-
-  // Completely clear and set pristine empty state
-  const handleClearAllData = () => {
-    localStorage.removeItem("scout_scouts");
-    localStorage.removeItem("scout_incomes");
-    localStorage.removeItem("scout_expenses");
-    localStorage.removeItem("scout_camp_setup");
-    localStorage.removeItem("scout_categories_v2");
-    localStorage.removeItem("scout_troop_stamp");
-
-    setCampSetup(EMPTY_CAMP_SETUP);
-    setScouts([]);
-    setIncomes([]);
-    setExpenses([]);
-    setCategories(CATEGORIES_LIST);
-    setTroopStamp(null);
-    alert(locale === "ar" ? "تم حذف قاعدة البيانات بالكامل وتصفير كل السجلات الكشفية بنجاح!" : "Base de données supprimée et vidée avec succès !");
-  };
-
-  // Login handler
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
 
-    // Simulate standard scout pin auth (universal tester PIN: 1957 or 1925 - founding milestones)
     if (passwordInput !== "1925" && passwordInput !== "1957") {
       setLoginError(locale === "ar" ? "كلمة المرور غير صحيحة. يرجى إدخال 1925 أو 1957 للتجربة القيادية." : "Code PIN erroné. Utilisez 1925 ou 1957 pour tester.");
       return;
@@ -267,7 +132,6 @@ export default function App() {
       setUsernameInput("");
       setPasswordInput("");
     } else {
-      // Create custom role if matched arbitrary
       const defaultUser: User = { id: "u-custom", name: usernameInput || "قائد كشفي", role: "treasurer" };
       setCurrentUser(defaultUser);
       setUsernameInput("");
@@ -275,18 +139,17 @@ export default function App() {
     }
   };
 
-  // Register single scout subscription
-  const handleAddScout = (name: string, regNo: string, amountPaid: number) => {
+  const handleAddScout = async (name: string, regNo: string, amountPaid: number) => {
+    const scoutId = `s-${Date.now()}`;
     const newScout: Scout = {
-      id: `s-${Date.now()}`,
+      id: scoutId,
       name,
       regNo,
       amountPaid,
       dateAdded: new Date().toISOString()
     };
-    setScouts(prev => [newScout, ...prev]);
+    await upsertScout(scoutId, newScout);
 
-    // If initial payment was made, log it instantly into General Incomes ledger
     if (amountPaid > 0) {
       const parentIncome: Income = {
         id: `inc-sc-${Date.now()}`,
@@ -297,66 +160,56 @@ export default function App() {
         method: "cash",
         receiptNo: `REC-AUTO-${Math.floor(Math.random() * 9000 + 1000)}`,
         registeredBy: currentUser?.name || "أمين المال",
-        scoutId: newScout.id,
+        scoutId,
         note: `معلوم قسط تسجيل مشاركة الكشاف ${name} بالدفتر`
       };
-      setIncomes(prev => [parentIncome, ...prev]);
-      // Auto-open print/share receipt preview for user convenience
+      await upsertIncome(parentIncome.id, parentIncome);
       setSelectedReceiptIncome(parentIncome);
     }
   };
 
-  // Add bulk list of scouts
-  const handleBulkLoadScouts = (scoutList: { name: string; regNo: string; amountPaid: number }[]) => {
-    const parsedScouts: Scout[] = scoutList.map((s, idx) => ({
-      id: `s-bulk-${idx}-${Date.now()}`,
-      name: s.name,
-      regNo: s.regNo,
-      amountPaid: s.amountPaid,
-      dateAdded: new Date().toISOString()
-    }));
-
-    setScouts(prev => [...parsedScouts, ...prev]);
-
-    // Log the cash generated in transactions instantly for payments that arrived
-    const aggregateCash = parsedScouts.filter(s => s.amountPaid > 0);
-    aggregateCash.forEach((ac, idx) => {
-      const tr: Income = {
-        id: `inc-bulk-${idx}-${Date.now()}`,
-        date: new Date().toISOString(),
-        type: "participation",
-        amount: ac.amountPaid,
-        payerName: `دفع الكشاف: ${ac.name}`,
-        method: "cash",
-        receiptNo: `REC-AUTO-${Math.floor(Math.random() * 90000 + 10000)}`,
-        registeredBy: currentUser?.name || "النظام المستورد التلقائي",
-        scoutId: ac.id,
-        note: `رسوم مضافة فورياً من معالج الاستيراد التلقائي للـ د.ت`
+  const handleBulkLoadScouts = async (scoutList: { name: string; regNo: string; amountPaid: number }[]) => {
+    for (let idx = 0; idx < scoutList.length; idx++) {
+      const s = scoutList[idx];
+      const scoutId = `s-bulk-${idx}-${Date.now()}`;
+      const scout: Scout = {
+        id: scoutId,
+        name: s.name,
+        regNo: s.regNo,
+        amountPaid: s.amountPaid,
+        dateAdded: new Date().toISOString()
       };
-      setIncomes(prev => [tr, ...prev]);
-    });
+      await upsertScout(scoutId, scout);
+
+      if (s.amountPaid > 0) {
+        const tr: Income = {
+          id: `inc-bulk-${idx}-${Date.now()}`,
+          date: new Date().toISOString(),
+          type: "participation",
+          amount: s.amountPaid,
+          payerName: `دفع الكشاف: ${s.name}`,
+          method: "cash",
+          receiptNo: `REC-AUTO-${Math.floor(Math.random() * 90000 + 10000)}`,
+          registeredBy: currentUser?.name || "النظام المستورد التلقائي",
+          scoutId,
+          note: `رسوم مضافة فورياً من معالج الاستيراد التلقائي`
+        };
+        await upsertIncome(tr.id, tr);
+      }
+    }
   };
 
-  // Record supplementary partial scout payment
-  const handleRecordScoutPayment = (
-    scoutId: string, 
-    amount: number, 
-    method: "cash" | "cheque" | "transfer", 
+  const handleRecordScoutPayment = async (
+    scoutId: string,
+    amount: number,
+    method: "cash" | "cheque" | "transfer",
     note?: string
   ) => {
-    setScouts(prev => prev.map(s => {
-      if (s.id === scoutId) {
-        return {
-          ...s,
-          amountPaid: s.amountPaid + amount
-        };
-      }
-      return s;
-    }));
-
     const targetScout = scouts.find(s => s.id === scoutId);
+    if (targetScout) {
+      await updateScout(scoutId, { amountPaid: targetScout.amountPaid + amount });
+    }
 
-    // Register transaction income ledger
     const newInc: Income = {
       id: `inc-p-${Date.now()}`,
       date: new Date().toISOString(),
@@ -369,24 +222,22 @@ export default function App() {
       scoutId,
       note: note || `قسط تكميلي مسدد لمعلوم المخيم`
     };
-    setIncomes(prev => [newInc, ...prev]);
-    // Auto-open print/share receipt preview for user convenience
+    await upsertIncome(newInc.id, newInc);
     setSelectedReceiptIncome(newInc);
   };
 
-  // Record an Expense (Cost) manually
-  const handleAddExpenseManual = (e: React.FormEvent) => {
+  const handleAddExpenseManual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (expAmount <= 0 || !expSupplier.trim()) return;
 
-    // Determine authorization status based on camps spending limit
-    const requiresApproval = expAmount > campSetup.spendingLimitWithoutApproval;
+    const requiresApproval = expAmount > (campSetup?.spendingLimitWithoutApproval ?? 100);
     const isApprovalAuto = !requiresApproval || currentUser?.role === "treasurer";
-
     const finalInvoiceStatus = expInvoiceImage ? "existing" : "missing";
 
+    const expId = `exp-man-${Date.now()}`;
+    const existingSetup = campSetup || EMPTY_CAMP_SETUP;
     const newExp: Expense = {
-      id: `exp-man-${Date.now()}`,
+      id: expId,
       invoiceCode: expInvoiceCode || `F-26-${String(expenses.length + 1).padStart(3, "0")}`,
       date: new Date().toISOString(),
       category: expCategory,
@@ -404,10 +255,9 @@ export default function App() {
       registeredBy: currentUser?.name || "أمين صندوق الفوج"
     };
 
-    setExpenses(prev => [newExp, ...prev]);
+    await upsertExpense(expId, newExp);
     setShowExpenseModal(false);
 
-    // Reset Form
     setExpDesc("");
     setExpAmount(0);
     setExpSupplier("");
@@ -416,17 +266,16 @@ export default function App() {
     setExpInvoiceCode("");
   };
 
-  // Record an Income manually
-  const handleAddIncomeManual = (e: React.FormEvent) => {
+  const handleAddIncomeManual = async (e: React.FormEvent) => {
     e.preventDefault();
     if (incAmount <= 0 || !incPayer.trim()) return;
 
-    // Pick selected reason from dropdown reasons list
     const selectedReasonObj = INCOME_REASONS.find(r => r.code === incReasonCode);
     const reasonText = selectedReasonObj ? (locale === "ar" ? selectedReasonObj.labelAr : selectedReasonObj.labelFr) : incNote;
 
+    const incId = `inc-man-${Date.now()}`;
     const newInc: Income = {
-      id: `inc-man-${Date.now()}`,
+      id: incId,
       date: new Date().toISOString(),
       type: incType,
       amount: incAmount,
@@ -449,17 +298,8 @@ export default function App() {
 
       if (existingScout) {
         newInc.scoutId = existingScout.id;
-        setScouts(prev => prev.map(s => {
-          if (s.id === existingScout.id) {
-            return {
-              ...s,
-              amountPaid: s.amountPaid + incAmount
-            };
-          }
-          return s;
-        }));
+        await updateScout(existingScout.id, { amountPaid: existingScout.amountPaid + incAmount });
       } else {
-        // Create new scout dynamically - by paying they become a participant!
         const newScoutId = `s-${Date.now()}`;
         const newScout: Scout = {
           id: newScoutId,
@@ -468,18 +308,15 @@ export default function App() {
           amountPaid: incAmount,
           dateAdded: new Date().toISOString()
         };
-        setScouts(prev => [newScout, ...prev]);
+        await upsertScout(newScoutId, newScout);
         newInc.scoutId = newScoutId;
       }
     }
 
-    setIncomes(prev => [newInc, ...prev]);
+    await upsertIncome(incId, newInc);
     setShowIncomeModal(false);
-
-    // Auto-open print/share receipt preview!
     setSelectedReceiptIncome(newInc);
 
-    // Reset Form
     setIncPayer("");
     setIncAmount(0);
     setIncNote("");
@@ -489,31 +326,23 @@ export default function App() {
     setIncSelectedScoutId("");
   };
 
-  // Actions: Audit cancellations
-  const handleCancelExpense = (id: string, reason: string) => {
-    setExpenses(prev => prev.map(e => e.id === id ? { ...e, isCancelled: true, cancelReason: reason } : e));
+  const handleCancelExpense = async (id: string, reason: string) => {
+    await updateExpense(id, { isCancelled: true, cancelReason: reason } as Partial<Expense>);
   };
 
-  const handleCancelIncome = (id: string, reason: string) => {
-    setIncomes(prev => prev.map(i => i.id === id ? { ...i, isCancelled: true, cancelReason: reason } : i));
+  const handleCancelIncome = async (id: string, reason: string) => {
+    await updateIncome(id, { isCancelled: true, cancelReason: reason } as Partial<Income>);
   };
 
-  const handleApproveExpense = (id: string) => {
-    setExpenses(prev => prev.map(e => e.id === id ? { ...e, status: "approved", authorizedBy: currentUser?.name || "القائد طارق" } : e));
+  const handleApproveExpense = async (id: string) => {
+    await updateExpense(id, { status: "approved", authorizedBy: currentUser?.name || "القائد طارق" } as Partial<Expense>);
   };
 
-  const handleUploadInvoice = (expenseId: string, base64: string) => {
-    setExpenses(prev => 
-      prev.map(exp => 
-        exp.id === expenseId 
-          ? { ...exp, invoiceImage: base64, invoiceStatus: "existing" as const } 
-          : exp
-      )
-    );
+  const handleUploadInvoice = async (expenseId: string, base64: string) => {
+    await updateExpense(expenseId, { invoiceImage: base64, invoiceStatus: "existing" } as Partial<Expense>);
   };
 
-  // AI OCR callback: pre-fills and immediately inserts
-  const handleOcrSuccess = (data: {
+  const handleOcrSuccess = async (data: {
     supplier: string;
     amount: number;
     category: ExpenseCategoryCode;
@@ -521,7 +350,7 @@ export default function App() {
     date: string;
     invoiceImage: string;
   }) => {
-    const requiresApproval = data.amount > campSetup.spendingLimitWithoutApproval;
+    const requiresApproval = data.amount > (campSetup?.spendingLimitWithoutApproval ?? 100);
     const isApprovalAuto = !requiresApproval || currentUser?.role === "treasurer";
 
     let nextNum = 1;
@@ -536,8 +365,9 @@ export default function App() {
     });
     const autoCode = `F-26-${String(nextNum).padStart(3, "0")}`;
 
+    const expId = `exp-ocr-${Date.now()}`;
     const newExp: Expense = {
-      id: `exp-ocr-${Date.now()}`,
+      id: expId,
       invoiceCode: autoCode,
       date: data.date,
       category: data.category,
@@ -552,12 +382,11 @@ export default function App() {
       registeredBy: `${currentUser?.name || "مستخرج آلي"} (معالج الـ OCR)`
     };
 
-    setExpenses(prev => [newExp, ...prev]);
+    await upsertExpense(expId, newExp);
     setActiveTab("transactions");
   };
 
-  // AI Voice callback: pre-fills and immediately inserts
-  const handleVoiceCommandParsed = (parsed: {
+  const handleVoiceCommandParsed = async (parsed: {
     type: "expense" | "income";
     category: ExpenseCategoryCode;
     incomeType?: string;
@@ -566,23 +395,24 @@ export default function App() {
     note?: string;
   }) => {
     if (parsed.type === "expense") {
-      const requiresApproval = parsed.amount > campSetup.spendingLimitWithoutApproval;
+      const requiresApproval = parsed.amount > (campSetup?.spendingLimitWithoutApproval ?? 100);
       const isApprovalAuto = !requiresApproval || currentUser?.role === "treasurer";
 
       let nextNum = 1;
       expenses.forEach(e => {
         if (e.invoiceCode && e.invoiceCode.startsWith("F-26-")) {
           const numPart = e.invoiceCode.substring(5);
-          const parsed = parseInt(numPart, 10);
-          if (!isNaN(parsed) && parsed >= nextNum) {
-            nextNum = parsed + 1;
+          const p = parseInt(numPart, 10);
+          if (!isNaN(p) && p >= nextNum) {
+            nextNum = p + 1;
           }
         }
       });
       const autoCode = `F-26-${String(nextNum).padStart(3, "0")}`;
 
+      const expId = `exp-voice-${Date.now()}`;
       const newExp: Expense = {
-        id: `exp-voice-${Date.now()}`,
+        id: expId,
         invoiceCode: autoCode,
         date: new Date().toISOString(),
         category: parsed.category || "misc",
@@ -596,10 +426,11 @@ export default function App() {
         note: parsed.note || "أمر صوتي",
         registeredBy: currentUser?.name || "المحلل الصوتي"
       };
-      setExpenses(prev => [newExp, ...prev]);
+      await upsertExpense(expId, newExp);
     } else {
+      const incId = `inc-voice-${Date.now()}`;
       const newInc: Income = {
-        id: `inc-voice-${Date.now()}`,
+        id: incId,
         date: new Date().toISOString(),
         type: (parsed.incomeType as any) || "donation",
         amount: parsed.amount,
@@ -609,14 +440,26 @@ export default function App() {
         registeredBy: currentUser?.name || "محلل صوتي",
         note: parsed.note || "تم التسجيل عن طريق الصوت"
       };
-      setIncomes(prev => [newInc, ...prev]);
+      await upsertIncome(incId, newInc);
     }
     setActiveTab("transactions");
   };
 
-  // -------------------------------------------------------------
-  // VIEW RENDERING: GATED SCENE TRANSITIONS
-  // -------------------------------------------------------------
+  const handleResetDatabases = async () => {
+    await saveCampSetup(DEFAULT_CAMP_SETUP);
+    await saveCategories(CATEGORIES_LIST);
+    await setTroopStamp(null);
+    alert(locale === "ar" ? "تم بنجاح تحميل البيانات التجريبية الشاملة!" : "Données de démonstration chargées avec succès !");
+  };
+
+  const handleClearAllData = async () => {
+    await saveCampSetup(EMPTY_CAMP_SETUP);
+    await saveCategories(CATEGORIES_LIST);
+    await setTroopStamp(null);
+    alert(locale === "ar" ? "تم حذف قاعدة البيانات بالكامل وتصفير كل السجلات الكشفية بنجاح!" : "Base de données supprimée et vidée avec succès !");
+  };
+
+  const effectiveCampSetup = campSetup || EMPTY_CAMP_SETUP;
 
   if (!currentUser) {
     return (
@@ -701,32 +544,28 @@ export default function App() {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 dark:bg-zinc-950 dark:text-zinc-100 flex flex-col transition-colors font-sans" dir={locale === "ar" ? "rtl" : "ltr"}>
       
-      {/* 🌲 HEADER */}
       <header className="bg-emerald-900 text-amber-50 px-4 sm:px-6 py-4 shadow-md shrink-0 border-b border-emerald-950 select-none">
         <div className="max-w-7xl mx-auto flex justify-between items-center gap-4">
           
-          {/* Brand logo & Active info */}
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-950 border border-amber-400 rounded-full text-amber-500">
               <Compass className="w-5 h-5" />
             </div>
             <div className="block text-right">
               <h1 className="font-extrabold text-xs sm:text-sm tracking-tight text-white flex items-center gap-1 flex-wrap">
-                <span>{campSetup.campName}</span>
+                <span>{effectiveCampSetup.campName}</span>
                 <span className="bg-amber-500 text-amber-950 font-mono font-bold text-[9px] px-1.5 py-0.5 rounded-full">
                   Fouj 2026/25
                 </span>
               </h1>
               <p className="text-3xs text-emerald-250 font-bold block">
-                {locale === "ar" ? `كراس المالية الرقمي لـ ${campSetup.campName || "للفوج الكشفي"}` : `Registre de Trésorerie - ${campSetup.campName || "Scout"}`}
+                {locale === "ar" ? `كراس المالية الرقمي لـ ${effectiveCampSetup.campName || "للفوج الكشفي"}` : `Registre de Trésorerie - ${effectiveCampSetup.campName || "Scout"}`}
               </p>
             </div>
           </div>
 
-          {/* Quick controls panel */}
           <div className="flex items-center gap-2.5">
             
-            {/* Dark mode switch */}
             <button 
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 hover:bg-emerald-850 rounded-lg text-emerald-200 transition"
@@ -735,7 +574,6 @@ export default function App() {
               {darkMode ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
             </button>
 
-            {/* Language toggle */}
             <button 
               onClick={() => setLocale(locale === "ar" ? "fr" : "ar")}
               className="p-2 hover:bg-emerald-850 rounded-lg text-emerald-200 transition flex items-center gap-1 font-bold text-3xs font-mono"
@@ -745,7 +583,6 @@ export default function App() {
               <span>{locale === "ar" ? "FR" : "AR"}</span>
             </button>
 
-            {/* User credentials details */}
             <div className="hidden md:flex items-center gap-2 bg-emerald-950/70 py-1.5 px-3 rounded-lg border border-emerald-800 text-xs font-semibold select-none text-right">
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               <div>
@@ -754,7 +591,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Log out */}
             <button 
               onClick={() => setCurrentUser(null)}
               className="p-2 hover:bg-rose-900 rounded-lg text-rose-300 transition"
@@ -768,7 +604,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* 🧭 NAVIGATION TABS BAR (RTL/LTR Adaptive tabs) */}
       <nav className="bg-white dark:bg-zinc-900 border-b border-stone-200 dark:border-zinc-800 py-1.5 px-4 overflow-x-auto select-none font-bold shrink-0">
         <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2">
           
@@ -823,7 +658,6 @@ export default function App() {
         </div>
       </nav>
 
-      {/* 🚀 MAIN CONTENT BODY */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 overflow-y-auto">
         
         {activeTab === "dashboard" && (
@@ -831,7 +665,7 @@ export default function App() {
             expenses={expenses}
             incomes={incomes}
             scouts={scouts}
-            campSetup={campSetup}
+            campSetup={effectiveCampSetup}
             locale={locale}
             setActiveTab={setActiveTab}
             onQuickIncome={() => setShowIncomeModal(true)}
@@ -858,7 +692,7 @@ export default function App() {
         {activeTab === "scouts" && (
           <ScoutManager 
             scouts={scouts}
-            campSetup={campSetup}
+            campSetup={effectiveCampSetup}
             currentUser={currentUser}
             locale={locale}
             onAddScout={handleAddScout}
@@ -872,7 +706,7 @@ export default function App() {
         {activeTab === "budget" && (
           <BudgetComparison 
             expenses={expenses}
-            campSetup={campSetup}
+            campSetup={effectiveCampSetup}
             locale={locale}
             categories={categories}
           />
@@ -883,7 +717,7 @@ export default function App() {
             expenses={expenses}
             incomes={incomes}
             scouts={scouts}
-            campSetup={campSetup}
+            campSetup={effectiveCampSetup}
             locale={locale}
             categories={categories}
             troopSignature={troopSignature}
@@ -892,10 +726,10 @@ export default function App() {
 
         {activeTab === "settings" && (
           <CampSettings 
-            campSetup={campSetup}
+            campSetup={effectiveCampSetup}
             currentUser={currentUser}
             locale={locale}
-            onUpdateSetup={setCampSetup}
+            onUpdateSetup={saveCampSetup}
             onSwitchUser={(uid) => {
               const matched = DEMO_USERS.find(du => du.id === uid);
               if (matched) setCurrentUser(matched);
@@ -903,7 +737,7 @@ export default function App() {
             onResetAllData={handleClearAllData}
             onLoadDemoData={handleResetDatabases}
             categories={categories}
-            onUpdateCategories={setCategories}
+            onUpdateCategories={saveCategories}
             troopStamp={troopStamp}
             onUpdateStamp={setTroopStamp}
             troopSignature={troopSignature}
@@ -913,11 +747,6 @@ export default function App() {
 
       </main>
 
-      {/* -------------------------------------------------------------
-          MODALS SECTION: MANUAL QUICK TRANSACTION FORMS
-         ------------------------------------------------------------- */}
-
-      {/* Manual ADD Expense Drawer modal */}
       {showExpenseModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 text-right">
           <div className="bg-white dark:bg-zinc-900 border text-stone-850 dark:text-zinc-150 p-6 rounded-2xl w-full max-w-md space-y-4">
@@ -1019,7 +848,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Photo Upload for Invoice */}
               <div className="p-3 bg-zinc-50 dark:bg-zinc-950 rounded-xl border border-zinc-150 dark:border-zinc-800 space-y-2 text-right">
                 <label className="block text-3xs font-black text-zinc-550 uppercase">{locale === "ar" ? "📷 تصوير أو تحميل الفاتورة الإثباتية" : "📷 Prendre une photo de la facture"}</label>
                 
@@ -1079,7 +907,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Manual ADD Income Drawer modal */}
       {showIncomeModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 text-right">
           <div className="bg-white dark:bg-zinc-900 border text-stone-850 p-6 rounded-2xl w-full max-w-sm space-y-4">
@@ -1237,7 +1064,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Receipt Preview/Print/Share Modal */}
       {selectedReceiptIncome && (
         <ReceiptModal
           income={selectedReceiptIncome}
@@ -1245,15 +1071,14 @@ export default function App() {
           troopStamp={troopStamp}
           onUploadStamp={setTroopStamp}
           troopSignature={troopSignature}
-          troopName={campSetup.troopName}
+          troopName={effectiveCampSetup.troopName}
           onClose={() => setSelectedReceiptIncome(null)}
         />
       )}
 
-      {/* Footer credits */}
       <footer className="bg-stone-100 dark:bg-zinc-900 border-t border-stone-200 dark:border-zinc-805 py-4 px-4 text-center text-3xs text-zinc-450/90 font-bold tracking-wider shrink-0 select-none">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-          <span>{campSetup.campName || "فوج الكشافة"} - الكشافة التونسية © 2026/2025</span>
+          <span>{effectiveCampSetup.campName || "فوج الكشافة"} - الكشافة التونسية © 2026/2025</span>
           <span className="font-mono">مطور بكفاءة للعمل الأوفلاين 🏕️ Offline Compliant</span>
         </div>
       </footer>
