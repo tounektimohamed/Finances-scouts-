@@ -15,7 +15,6 @@ import {
   useExpensesCollection,
   useCategories,
   useTroopImages,
-  uploadBase64Fields,
 } from "./lib/firestoreService";
 
 const INCOME_REASONS = [
@@ -257,8 +256,7 @@ export default function App() {
       registeredBy: currentUser?.name || "أمين صندوق الفوج"
     };
 
-    const savedExp = await uploadBase64Fields(newExp, `expenses/${expId}`, ["invoiceImage"]);
-    await upsertExpense(expId, savedExp);
+    await upsertExpense(expId, newExp);
     setShowExpenseModal(false);
 
     setExpDesc("");
@@ -343,8 +341,7 @@ export default function App() {
   };
 
   const handleUploadInvoice = async (expenseId: string, base64: string) => {
-    const url = await uploadBase64Fields({ invoiceImage: base64, invoiceStatus: "existing" as const }, `expenses/${expenseId}`, ["invoiceImage"]);
-    await updateExpense(expenseId, { invoiceImage: url.invoiceImage, invoiceStatus: "existing" } as Partial<Expense>);
+    await updateExpense(expenseId, { invoiceImage: base64, invoiceStatus: "existing" } as Partial<Expense>);
   };
 
   const handleOcrSuccess = async (data: {
@@ -387,8 +384,7 @@ export default function App() {
       registeredBy: `${currentUser?.name || "مستخرج آلي"} (معالج الـ OCR)`
     };
 
-    const savedOcrExp = await uploadBase64Fields(newExp, `expenses/${expId}`, ["invoiceImage"]);
-    await upsertExpense(expId, savedOcrExp);
+    await upsertExpense(expId, newExp);
     setActiveTab("transactions");
   };
 
