@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Expense, Income, Scout, CampSetup, ExpenseCategoryCode } from "../types";
-import { formatTND, formatDate } from "../utils/helpers";
+import { formatTND, formatDate, calculateCampDays } from "../utils/helpers";
 import { CATEGORIES_LIST } from "../initialData";
 import { FileText, Printer, Download, Share2, Mail, Users, Calculator } from "lucide-react";
 import OfficialBookletReport from "./OfficialBookletReport";
@@ -130,22 +130,85 @@ export default function ReportExports({
     reportSub = locale === "ar" ? "ملخص نهائي شامل يبرز الكفاءة المالية وصافي الرصيد المتبقي للأرشيف." : "Synthèse finale de clôture d'intendance du camp.";
     
     // Calculations for the final summary card
-    const costPerScout = scouts.length > 0 ? (totalExpense / scouts.length) : (totalExpense / campSetup.scoutCount);
-    const dailyCost = totalExpense / 10; // estimate over 10 days
+    const campDays = calculateCampDays(campSetup.startDate, campSetup.endDate);
+    const totalPersons = campSetup.scoutCount + campSetup.leaderCount;
+    const transportExpense = activeApprovedExp
+      .filter(e => e.category === "transport")
+      .reduce((sum, e) => sum + e.amount, 0);
+    const expenseWithoutTransport = totalExpense - transportExpense;
+
+    const costPerPerson = totalPersons > 0 ? totalExpense / totalPersons : 0;
+    const costPerPersonPerDay = totalPersons > 0 && campDays > 0 ? totalExpense / totalPersons / campDays : 0;
+    const costPerPersonNoTransport = totalPersons > 0 ? expenseWithoutTransport / totalPersons : 0;
+    const costPerPersonPerDayNoTransport = totalPersons > 0 && campDays > 0 ? expenseWithoutTransport / totalPersons / campDays : 0;
 
     customCalculationsNode = (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-zinc-50 dark:bg-zinc-90 w-full p-2 rounded p-5 rounded-2xl border dark:border-zinc-800 text-xs font-medium text-right">
-        <div>
-          <p className="text-zinc-500 font-bold">{locale === "ar" ? "تكلفة الفرد الكلية (متوسط)" : "Coût par scout (Moyenne)"}</p>
-          <p className="text-base font-black text-emerald-800 dark:text-emerald-400 mt-1">{formatTND(costPerScout, locale)}</p>
+      <div className="space-y-4 text-xs font-medium text-right">
+        {/* Main summary row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-zinc-50 dark:bg-zinc-900 p-5 rounded-2xl border dark:border-zinc-800">
+          <div>
+            <p className="text-zinc-500 font-bold">{locale === "ar" ? "إجمالي المصاريف" : "Dépenses totales"}</p>
+            <p className="text-base font-black text-rose-700 dark:text-rose-400 mt-1">{formatTND(totalExpense, locale)}</p>
+          </div>
+          <div>
+            <p className="text-zinc-500 font-bold">{locale === "ar" ? "إجمالي المداخيل" : "Recettes totales"}</p>
+            <p className="text-base font-black text-emerald-800 dark:text-emerald-400 mt-1">{formatTND(totalIncome, locale)}</p>
+          </div>
+          <div>
+            <p className="text-zinc-500 font-bold">{locale === "ar" ? "صافي الوفورات / الفائض" : "Excédent de caisse"}</p>
+            <p className={`text-base font-black mt-1 ${currentBalance >= 0 ? 'text-emerald-800 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>{formatTND(currentBalance, locale)}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-zinc-500 font-bold">{locale === "ar" ? "متوسط التكلفة اليومية للمخيم" : "Coût journalier théorique"}</p>
-          <p className="text-base font-black text-zinc-800 dark:text-zinc-200 mt-1">{formatTND(dailyCost, locale)}</p>
+
+        {/* Cost per person with/without transport */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-amber-50/70 dark:bg-zinc-900/60 p-5 rounded-2xl border border-amber-200 dark:border-zinc-800">
+            <p className="text-zinc-500 font-bold text-2xs mb-2">{locale === "ar" ? "💰 التكلفة شاملة التنقل" : "💰 Coût AVEC transport"}</p>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center border-b border-amber-200/50 dark:border-zinc-700 pb-1.5">
+                <span className="font-black text-sm">{formatTND(costPerPerson, locale)}</span>
+                <span className="text-zinc-500 text-3xs">{locale === "ar" ? "تكلفة الفرد طيلة النشاط" : "Par personne (total)"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-black text-sm">{formatTND(costPerPersonPerDay, locale)}</span>
+                <span className="text-zinc-500 text-3xs">{locale === "ar" ? `تكلفة الفرد لـ ${campDays} أيام` : `Par personne / ${campDays} jours`}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-sky-50/70 dark:bg-zinc-900/60 p-5 rounded-2xl border border-sky-200 dark:border-zinc-800">
+            <p className="text-zinc-500 font-bold text-2xs mb-2">{locale === "ar" ? "💰 التكلفة دون التنقل" : "💰 Coût SANS transport"}</p>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center border-b border-sky-200/50 dark:border-zinc-700 pb-1.5">
+                <span className="font-black text-sm">{formatTND(costPerPersonNoTransport, locale)}</span>
+                <span className="text-zinc-500 text-3xs">{locale === "ar" ? "تكلفة الفرد طيلة النشاط" : "Par personne (total)"}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-black text-sm">{formatTND(costPerPersonPerDayNoTransport, locale)}</span>
+                <span className="text-zinc-500 text-3xs">{locale === "ar" ? `تكلفة الفرد لـ ${campDays} أيام` : `Par personne / ${campDays} jours`}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="text-zinc-500 font-bold">{locale === "ar" ? "صافي الوفورات / الفائض الكلي" : "Excédent de caisse"}</p>
-          <p className="text-base font-black text-emerald-800 dark:text-emerald-400 mt-1">{formatTND(currentBalance, locale)}</p>
+
+        {/* Detail row */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-3xs text-zinc-500">
+          <div className="bg-white dark:bg-zinc-950 p-3 rounded-xl border dark:border-zinc-800">
+            <p className="font-bold">{locale === "ar" ? "عدد المشاركين" : "Participants"}</p>
+            <p className="font-black text-zinc-800 dark:text-zinc-200 mt-0.5">{totalPersons} ({locale === "ar" ? `${campSetup.scoutCount} كشاف + ${campSetup.leaderCount} قائد` : `${campSetup.scoutCount} scouts + ${campSetup.leaderCount} chefs`})</p>
+          </div>
+          <div className="bg-white dark:bg-zinc-950 p-3 rounded-xl border dark:border-zinc-800">
+            <p className="font-bold">{locale === "ar" ? "مدة النشاط" : "Durée"}</p>
+            <p className="font-black text-zinc-800 dark:text-zinc-200 mt-0.5">{campDays} {locale === "ar" ? "أيام" : "jours"}</p>
+          </div>
+          <div className="bg-white dark:bg-zinc-950 p-3 rounded-xl border dark:border-zinc-800">
+            <p className="font-bold">{locale === "ar" ? "تكاليف النقل" : "Transport"}</p>
+            <p className="font-black text-zinc-800 dark:text-zinc-200 mt-0.5">{formatTND(transportExpense, locale)}</p>
+          </div>
+          <div className="bg-white dark:bg-zinc-950 p-3 rounded-xl border dark:border-zinc-800">
+            <p className="font-bold">{locale === "ar" ? "باقي المصاريف" : "Autres dépenses"}</p>
+            <p className="font-black text-zinc-800 dark:text-zinc-200 mt-0.5">{formatTND(expenseWithoutTransport, locale)}</p>
+          </div>
         </div>
       </div>
     );
