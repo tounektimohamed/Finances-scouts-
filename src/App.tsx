@@ -237,7 +237,7 @@ export default function App() {
 
     const expId = `exp-man-${Date.now()}`;
     const existingSetup = campSetup || EMPTY_CAMP_SETUP;
-    const newExp: Expense = {
+    const newExp: Partial<Expense> = {
       id: expId,
       invoiceCode: expInvoiceCode || `F-26-${String(expenses.length + 1).padStart(3, "0")}`,
       date: new Date().toISOString(),
@@ -250,13 +250,13 @@ export default function App() {
       paidBy: expPaidBy || currentUser?.name || "أمين صندوق الفوج",
       authorizedBy: requiresApproval ? (isApprovalAuto ? (currentUser?.name || "أمين صندوق الفوج") : "معلق ترخيص بموافقة القائد") : "تلقائي القيود",
       invoiceStatus: finalInvoiceStatus,
-      invoiceImage: expInvoiceImage || undefined,
+      ...(expInvoiceImage ? { invoiceImage: expInvoiceImage } : {}),
       status: isApprovalAuto ? "approved" : "pending_approval",
       note: expNote,
       registeredBy: currentUser?.name || "أمين صندوق الفوج"
     };
 
-    await upsertExpense(expId, newExp);
+    await upsertExpense(expId, newExp as Expense);
     setShowExpenseModal(false);
 
     setExpDesc("");
@@ -286,7 +286,7 @@ export default function App() {
       registeredBy: currentUser?.name || "أمين المال",
       note: incNote || reasonText,
       receivedByLeader: incReceivedBy || currentUser?.name || "أمين صندوق الفوج",
-      payerPhone: incPayerPhone || undefined,
+      ...(incPayerPhone ? { payerPhone: incPayerPhone } : {}),
       incomeReason: reasonText
     };
 

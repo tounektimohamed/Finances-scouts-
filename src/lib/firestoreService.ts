@@ -38,6 +38,14 @@ function deserializeDates(data: any): any {
   return result;
 }
 
+function removeUndefined(obj: Record<string, unknown>) {
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) cleaned[k] = v;
+  }
+  return cleaned;
+}
+
 export function useCampSetup() {
   const [setup, setSetup] = useState<CampSetup | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +67,7 @@ export function useCampSetup() {
   }, []);
 
   const saveCampSetup = useCallback(async (data: CampSetup) => {
-    await setDoc(doc(db, "campSetup", "current-camp"), data, { merge: true });
+    await setDoc(doc(db, "campSetup", "current-camp"), removeUndefined(data as any), { merge: true });
   }, []);
 
   return { setup, loading, saveCampSetup };
@@ -108,11 +116,11 @@ export function useScoutsCollection() {
   }, []);
 
   const upsertScout = useCallback(async (id: string, data: Scout) => {
-    await setDoc(doc(db, SCOUTS_COLLECTION, id), data);
+    await setDoc(doc(db, SCOUTS_COLLECTION, id), removeUndefined(data as any));
   }, []);
 
   const updateScout = useCallback(async (id: string, data: Partial<Scout>) => {
-    await updateDoc(doc(db, SCOUTS_COLLECTION, id), data);
+    await updateDoc(doc(db, SCOUTS_COLLECTION, id), removeUndefined(data as any));
   }, []);
 
   return { scouts, loading, upsertScout, updateScout };
@@ -134,11 +142,11 @@ export function useIncomesCollection() {
   }, []);
 
   const upsertIncome = useCallback(async (id: string, data: Income) => {
-    await setDoc(doc(db, INCOMES_COLLECTION, id), data);
+    await setDoc(doc(db, INCOMES_COLLECTION, id), removeUndefined(data as any));
   }, []);
 
   const updateIncome = useCallback(async (id: string, data: Partial<Income>) => {
-    await updateDoc(doc(db, INCOMES_COLLECTION, id), data);
+    await updateDoc(doc(db, INCOMES_COLLECTION, id), removeUndefined(data as any));
   }, []);
 
   return { incomes, loading, upsertIncome, updateIncome };
@@ -160,11 +168,11 @@ export function useExpensesCollection() {
   }, []);
 
   const upsertExpense = useCallback(async (id: string, data: Expense) => {
-    await setDoc(doc(db, EXPENSES_COLLECTION, id), data);
+    await setDoc(doc(db, EXPENSES_COLLECTION, id), removeUndefined(data as any));
   }, []);
 
   const updateExpense = useCallback(async (id: string, data: Partial<Expense>) => {
-    await updateDoc(doc(db, EXPENSES_COLLECTION, id), data);
+    await updateDoc(doc(db, EXPENSES_COLLECTION, id), removeUndefined(data as any));
   }, []);
 
   return { expenses, loading, upsertExpense, updateExpense };
@@ -188,12 +196,12 @@ export function useTroopImages() {
   }, []);
 
   const saveStamp = useCallback(async (base64: string | null) => {
-    await setDoc(doc(db, "troop", "images"), { stamp: base64, signature }, { merge: true });
+    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp: base64, signature } as any), { merge: true });
     setStamp(base64);
   }, [signature]);
 
   const saveSignature = useCallback(async (base64: string | null) => {
-    await setDoc(doc(db, "troop", "images"), { stamp, signature: base64 }, { merge: true });
+    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp, signature: base64 } as any), { merge: true });
     setSignature(base64);
   }, [stamp]);
 
