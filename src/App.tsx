@@ -69,7 +69,7 @@ export default function App() {
   const [expPrice, setExpPrice] = useState<number>(0);
   const [expSupplier, setExpSupplier] = useState("");
   const [expPaidBy, setExpPaidBy] = useState("");
-  const [expInvoiceStatus, setExpInvoiceStatus] = useState<"existing" | "missing" | "way">("existing");
+  const [expInvoiceStatus, setExpInvoiceStatus] = useState<"existing" | "missing" | "way">("missing");
   const [expInvoiceImage, setExpInvoiceImage] = useState<string | null>(null);
   const [expNote, setExpNote] = useState("");
   const [expInvoiceCode, setExpInvoiceCode] = useState("");
