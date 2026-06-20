@@ -233,6 +233,42 @@ Provide response in JSON matching this schema:
   }
 });
 
+// 3. API: Generate and send receipt PDF via WhatsApp
+app.post("/api/send-receipt", async (req, res) => {
+  const { incomeId, phone } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({ error: "Missing phone parameter" });
+  }
+
+  try {
+    const { generateReceiptPDF } = await import("./src/lib/pdfReceipt.ts");
+    const { sendReceiptViaWhatsApp } = await import("./src/lib/whatsapp.ts");
+
+    const { db } = await import("./src/lib/firebase.ts");
+    const { getDoc, doc } = await import("firebase/firestore");
+
+    const incSnap = await getDoc(doc(db, "incomes", incomeId));
+    if (!incSnap.exists()) {
+      return res.status(404).json({ error: "Income not found" });
+    }
+
+    const incomeData = { id: incSnap.id, ...incSnap.data() } as any;
+    const troopName = process.env.TROOP_NAME || "فوج الكشافة";
+
+    const pdfBuffer = await generateReceiptPDF(incomeData, troopName);
+    const pdfBase64 = pdfBuffer.toString("base64");
+    const fileName = `Reçu_Scout_${incomeData.receiptNo || incomeId}.pdf`;
+    const caption = `⚜️ وصل استلام كشفي رقم ${incomeData.receiptNo || ""} - ${incomeData.payerName || ""}`;
+
+    const result = await sendReceiptViaWhatsApp({ phone, pdfBase64, fileName, caption });
+    return res.json(result);
+  } catch (error: any) {
+    console.error("Send receipt error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // Serve frontend assets or configure Vite dev mode middleware
 async function setupServer() {
   if (process.env.NODE_ENV !== "production") {

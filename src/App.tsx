@@ -57,6 +57,7 @@ export default function App() {
   const { stamp: troopStamp, signature: troopSignature, saveStamp: setTroopStamp, saveSignature: setTroopSignature } = useTroopImages();
 
   const [selectedReceiptIncome, setSelectedReceiptIncome] = useState<Income | null>(null);
+  const [sendingStatus, setSendingStatus] = useState<string | null>(null);
 
   const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -316,6 +317,7 @@ export default function App() {
     await upsertIncome(incId, newInc);
     setShowIncomeModal(false);
     setSelectedReceiptIncome(newInc);
+    autoSendReceipt(newInc);
 
     setIncPayer("");
     setIncAmount(0);
@@ -443,6 +445,27 @@ export default function App() {
       await upsertIncome(incId, newInc);
     }
     setActiveTab("transactions");
+  };
+
+  const autoSendReceipt = async (income: Income) => {
+    if (!income.payerPhone) return;
+    setSendingStatus(locale === "ar" ? "جاري إرسال الوصل عبر واتساب..." : "Envoi du reçu par WhatsApp...");
+    try {
+      const response = await fetch("/api/send-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ incomeId: income.id, phone: income.payerPhone }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        setSendingStatus(locale === "ar" ? "✅ تم إرسال الوصل بنجاح" : "✅ Reçu envoyé avec succès");
+      } else {
+        setSendingStatus(locale === "ar" ? `⚠️ ${result.message}` : `⚠️ ${result.message}`);
+      }
+    } catch {
+      setSendingStatus(locale === "ar" ? "❌ فشل إرسال الوصل" : "❌ Échec d'envoi du reçu");
+    }
+    setTimeout(() => setSendingStatus(null), 4000);
   };
 
   const handleResetDatabases = async () => {
@@ -1074,6 +1097,14 @@ export default function App() {
           troopName={effectiveCampSetup.troopName}
           onClose={() => setSelectedReceiptIncome(null)}
         />
+      )}
+
+      {/* Auto-send WhatsApp notification toast */}
+      {sendingStatus && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] bg-emerald-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-emerald-700 text-xs font-bold animate-in slide-in-from-bottom-4 fade-in duration-200 flex items-center gap-2.5">
+          <span>{sendingStatus.includes("✅") ? "✅" : sendingStatus.includes("❌") ? "❌" : "⏳"}</span>
+          <span>{sendingStatus}</span>
+        </div>
       )}
 
       <footer className="bg-stone-100 dark:bg-zinc-900 border-t border-stone-200 dark:border-zinc-805 py-4 px-4 text-center text-3xs text-zinc-450/90 font-bold tracking-wider shrink-0 select-none">
