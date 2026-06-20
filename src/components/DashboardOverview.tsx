@@ -223,7 +223,7 @@ export default function DashboardOverview({
           </div>
           <div className="text-right">
             <h3 className="font-extrabold text-base sm:text-lg text-white group-hover:text-amber-300 transition duration-150 leading-tight">
-              {locale === "ar" ? "قبط وإدخال مدخول كشفي جديد 💵" : "Enregistrer une Recette (Entrée)"}
+              {locale === "ar" ? "قبض وإدخال مدخول كشفي جديد 💵" : "Enregistrer une Recette (Entrée)"}
             </h3>
             <p className="text-[10px] text-emerald-200/80 font-medium mt-1 leading-normal max-w-sm">
               {locale === "ar" 
@@ -284,8 +284,8 @@ export default function DashboardOverview({
           
           <p className="text-3xs sm:text-2xs text-zinc-200 leading-relaxed font-semibold">
             {locale === "ar"
-              ? "يمكنك البدء مباشرة بتبويب وسجل بيانات فوجك الكشفي في لوحة الخيارات، أو شحن البيانات التوضيحية الجاهزة فوراً بضغطة واحدة لاختبار الإحصائيات، معايير التحليل والميزات الذكية المصممة لدينا."
-              : "Commencez à enregistrer vos troupes et opérations réelles, ou chargez notre jeu d'essai préprogrammé pour explorer la puissance des rapports et tableaux de bord d'archivage."}
+              ? "ابدأ مباشرة بإدراج وتدوين سجلات فوجك الكشفي التونسي الفعلي من خلال ضبط الاسم والتواريخ وميزانية الأنشطة، وتعمير اشتراكات الكشافة والوصولات والمصاريف في الوقت الفعلي."
+              : "Commencez à enregistrer vos troupes et opérations réelles en configurant les dates, budgets prévisionnels et en ajoutant directement vos flux financiers journaliers."}
           </p>
 
           <div className="flex flex-wrap gap-2.5 pt-1">
@@ -295,14 +295,6 @@ export default function DashboardOverview({
             >
               {locale === "ar" ? "⚙️ إعدادات الفوج الجديد" : "Paramètres du Camp"}
             </button>
-            {onLoadDemoData && (
-              <button 
-                onClick={onLoadDemoData}
-                className="bg-emerald-800 hover:bg-emerald-700 hover:text-white text-white border border-emerald-700/60 font-black text-3xs px-4 py-2 rounded-xl transition cursor-pointer"
-              >
-                {locale === "ar" ? "💡 شحن بيانات تجريبية للتجربة فوراً" : "Charger le modèle démo"}
-              </button>
-            )}
           </div>
         </div>
       )}

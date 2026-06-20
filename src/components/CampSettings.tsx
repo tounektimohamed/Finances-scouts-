@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { CampSetup, User, ExpenseCategoryCode } from "../types";
 import { DEMO_USERS, CATEGORIES_LIST } from "../initialData";
 import { formatTND } from "../utils/helpers";
@@ -16,6 +16,8 @@ interface CampSettingsProps {
   onUpdateCategories: (newCats: any[]) => void;
   troopStamp: string | null;
   onUpdateStamp: (stamp: string | null) => void;
+  troopSignature?: string | null;
+  onUpdateSignature?: (signature: string | null) => void;
 }
 
 export default function CampSettings({
@@ -29,11 +31,14 @@ export default function CampSettings({
   categories,
   onUpdateCategories,
   troopStamp,
-  onUpdateStamp
+  onUpdateStamp,
+  troopSignature = null,
+  onUpdateSignature
 }: CampSettingsProps) {
   
   // Local state for configuration form
   const [campName, setCampName] = useState(campSetup.campName);
+  const [troopName, setTroopName] = useState(campSetup.troopName || "فوج الكشافة بقرطاج");
   const [startDate, setStartDate] = useState(campSetup.startDate);
   const [endDate, setEndDate] = useState(campSetup.endDate);
   const [scoutCount, setScoutCount] = useState(campSetup.scoutCount);
@@ -53,10 +58,114 @@ export default function CampSettings({
     }));
   };
 
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawing = useRef(false);
+  const lastX = useRef(0);
+  const lastY = useRef(0);
+
+  const getCoordinates = (e: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    
+    // Support touches
+    if (e.touches && e.touches.length > 0) {
+      const touch = e.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    }
+    
+    // Standard mouse position (or unified)
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.cancelable) e.preventDefault();
+    const pos = getCoordinates(e);
+    isDrawing.current = true;
+    lastX.current = pos.x;
+    lastY.current = pos.y;
+    
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+    }
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return;
+    if (e.cancelable) e.preventDefault();
+    const pos = getCoordinates(e);
+    
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.strokeStyle = "#1b3a4b"; // Beautiful midnight blue ink
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX.current, lastY.current);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        
+        lastX.current = pos.x;
+        lastY.current = pos.y;
+      }
+    }
+  };
+
+  const stopDrawing = () => {
+    isDrawing.current = false;
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+  };
+
+  const handleAdoptSignature = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Check if empty
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const buffer = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
+    const isBlank = !buffer.some(color => color !== 0);
+    
+    if (isBlank) {
+      alert(locale === "ar" ? "الرجاء رسم توقيعك على المساحة المخصصة أولاً!" : "Veuillez dessiner votre signature avant de l'adopter.");
+      return;
+    }
+    
+    const dataUrl = canvas.toDataURL("image/png");
+    if (onUpdateSignature) {
+      onUpdateSignature(dataUrl);
+    }
+  };
+
   const handleSaveConfig = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateSetup({
       campName,
+      troopName,
       startDate,
       endDate,
       scoutCount,
@@ -93,7 +202,18 @@ export default function CampSettings({
             {/* Basic Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
-                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "اسم الفوج الكشفي / المخيم" : "Nom du camp"}</label>
+                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "اسم الفوج الكشفي الضابط" : "Nom du groupe scout"}</label>
+                <input 
+                  type="text" 
+                  className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800 font-extrabold"
+                  value={troopName}
+                  onChange={(e) => setTroopName(e.target.value)}
+                  placeholder={locale === "ar" ? "مثال: فوج الكشافة بقرطاج" : "Ex: Groupe de Carthage"}
+                />
+              </div>
+
+              <div>
+                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "اسم الفعالية / المخيّم الصيفي" : "Nom de l'activité / Camp"}</label>
                 <input 
                   type="text" 
                   className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800"
@@ -143,7 +263,7 @@ export default function CampSettings({
               </div>
 
               <div>
-                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "سقف الميزانية الفردية دون رخصة قائد الفوج" : "Limite dépenses sans approbation (TND)"}</label>
+                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "سقف الميزانية الفردية دون رخصة قائد النشاط" : "Limite dépenses sans approbation (TND)"}</label>
                 <input 
                   type="number" 
                   className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800 font-bold text-amber-600"
@@ -210,6 +330,72 @@ export default function CampSettings({
               </div>
             </div>
 
+            {/* رسم واعتماد الإمضاء الكشفي الكروكي */}
+            <div className="p-4 bg-emerald-50/25 dark:bg-zinc-900 rounded-xl border border-emerald-100/75 dark:border-zinc-800 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-400">
+                  ✍️ {locale === "ar" ? "رسم وتثبيت إمضاء القائد / أمين المال" : "Dessiner & adopter la signature"}
+                </span>
+                {troopSignature && (
+                  <button
+                    type="button"
+                    onClick={() => onUpdateSignature && onUpdateSignature(null)}
+                    className="text-stone-400 hover:text-rose-650 font-extrabold text-[10px] underline cursor-pointer"
+                  >
+                    {locale === "ar" ? "إلغاء الإمضاء ✕" : "Réinitialiser ✕"}
+                  </button>
+                )}
+              </div>
+
+              {troopSignature ? (
+                <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl flex flex-col items-center justify-center space-y-2">
+                  <span className="text-[10px] text-zinc-405 font-bold block">{locale === "ar" ? "الإمضاء الرقمي المعتمد حالياً:" : "Signature adoptée :"}</span>
+                  <div className="bg-stone-50/60 dark:bg-zinc-900 p-2 border border-dashed border-emerald-300 w-full max-w-[280px] h-20 flex items-center justify-center rounded-lg">
+                    <img src={troopSignature} alt="Adopted Signature" className="max-h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden relative">
+                    <div className="absolute top-1.5 left-1.5 bg-zinc-105 dark:bg-zinc-900 rounded px-1.5 py-0.5 text-[8px] font-black text-zinc-400 pointer-events-none select-none uppercase">
+                      {locale === "ar" ? "رسم حر بالإصبع أو الفأرة" : "Tablette de dessin"}
+                    </div>
+                    
+                    <canvas
+                      ref={canvasRef}
+                      width={350}
+                      height={120}
+                      className="w-full h-[120px] bg-zinc-50/40 dark:bg-zinc-900/45 cursor-crosshair block touch-none"
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={stopDrawing}
+                      onMouseLeave={stopDrawing}
+                      onTouchStart={startDrawing}
+                      onTouchMove={draw}
+                      onTouchEnd={stopDrawing}
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2 text-3xs font-black">
+                    <button
+                      type="button"
+                      onClick={clearCanvas}
+                      className="flex-1 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-550 dark:text-zinc-300 py-1.5 rounded-lg transition"
+                    >
+                      🧹 {locale === "ar" ? "مسح اللوحة" : "Effacer"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAdoptSignature}
+                      className="flex-1 bg-emerald-900 hover:bg-emerald-950 text-white py-1.5 rounded-lg transition"
+                    >
+                      ✨ {locale === "ar" ? "اعتماد حفظ التوقيع" : "Adopter la signature"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Category planned budgets section */}
             <div className="space-y-4 pt-4 border-t dark:border-zinc-800">
               <h4 className="font-bold text-xs text-zinc-800 dark:text-zinc-200">
@@ -220,6 +406,26 @@ export default function CampSettings({
                   ? "قم بضبط الحدود القصوى التقديرية لكل قسم لتفعيل نظام الإنذار المبكر ومقارنة الموازنة والانحراف المالي تلقائياً."
                   : "Fixez les limites prévues pour alerter l'intendant lors du dépassement de tranche."}
               </p>
+
+              {/* Total Estimated Budget calculated from individual category estimations */}
+              {(() => {
+                const totalPlannedEst = categories.reduce((acc, cat) => acc + (plannedNode[cat.code] || 0), 0);
+                return (
+                  <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-800/40 flex justify-between items-center transition-all">
+                    <div className="block text-right">
+                      <span className="font-extrabold text-[11px] block">
+                        {locale === "ar" ? "⚜️ إجمالي الميزانية التقديرية الكلية الصادرة من التقديرات:" : "⚜️ Budget global prévisionnel cumulé :"}
+                      </span>
+                      <span className="text-4xs text-zinc-450 dark:text-zinc-500 font-sans mt-0.5 block">
+                        {locale === "ar" ? "(جمع تقديرات ميزانيات بنود التبويبات المحددة أدناه)" : "(Calculé automatiquement par somme des rubriques)"}
+                      </span>
+                    </div>
+                    <span className="font-black text-sm text-emerald-950 dark:text-white bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg shadow-3xs">
+                      {formatTND(totalPlannedEst, locale)}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                 {categories.map((cat) => (
@@ -407,8 +613,8 @@ export default function CampSettings({
             </h4>
             <p className="text-3xs text-zinc-400 leading-relaxed">
               {locale === "ar" 
-                ? `يمكن لأمين المال تصفير مسودة الصندوق وإعادة الدفتر المالي لمخيم ${campSetup.campName || "فوج الكشافة"} إلى وضعه الأصلي الفارغ السليم، كما يمكن شحن بيانات كشف تجريبية لاستكشاف النظام بمثال شامل.`
-                : "Gérez l'état du registre : réinitialisez-le à blanc (complètement vide) ou chargez un jeu de données démonstration."}
+                ? `يمكن لأمين المال تصفير مسودة الصندوق وإعادة الدفتر المالي لمخيم ${campSetup.campName || "فوج الكشافة"} إلى وضعه الأصلي الفارغ السليم لبدء مخيم جديد.`
+                : "Gérez l'état du registre : réinitialisez-le à blanc (complètement vide) pour démarrer un nouveau camp."}
             </p>
             <div className="space-y-2.5">
               <button 
@@ -420,18 +626,6 @@ export default function CampSettings({
                 className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-3xs py-2 rounded-lg transition"
               >
                 {locale === "ar" ? "⚠️ تصفير الدفتر كلياً (بدء استخدام فارغ)" : "Vider le registre (Nouveau Camp)"}
-              </button>
-
-              <button 
-                type="button"
-                onClick={() => {
-                  if (window.confirm(locale === "ar" ? "هل ترغب في شحن البيانات التجريبية الشاملة (كشافة واشتراكات ومصاريف للتجربة)؟" : "Charger les données de démonstration ?")) {
-                    onLoadDemoData();
-                  }
-                }}
-                className="w-full bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-3xs py-2 rounded-lg transition block text-center"
-              >
-                {locale === "ar" ? "💡 شحن بيانات تجريبية للتخيل والفحص" : "Charger les données de test (Démo)"}
               </button>
             </div>
           </div>

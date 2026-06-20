@@ -40,6 +40,7 @@ export interface ExpenseCategory {
 
 export interface Expense {
   id: string;
+  invoiceCode: string; // Unique invoice reference code (e.g., F-2026-001) that the leader writes on paper
   date: string; // ISO datetime/date
   category: ExpenseCategoryCode;
   description: string;
@@ -68,6 +69,7 @@ export interface Scout {
 
 export interface CampSetup {
   campName: string;
+  troopName?: string;
   startDate: string;
   endDate: string;
   scoutCount: number;

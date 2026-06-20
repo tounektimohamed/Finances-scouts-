@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Expense, Income, User, ExpenseCategoryCode, IncomeType } from "../types";
 import { formatTND, formatDate } from "../utils/helpers";
 import { CATEGORIES_LIST } from "../initialData";
-import { Search, Filter, AlertCircle, XCircle, CheckCircle, FileText, Camera } from "lucide-react";
+import { Search, Filter, AlertCircle, XCircle, CheckCircle, FileText, Camera, Download, Upload, Plus } from "lucide-react";
 
 interface TransactionsListProps {
   expenses: Expense[];
@@ -14,6 +14,7 @@ interface TransactionsListProps {
   onApproveExpense: (id: string) => void;
   categories?: { code: string; labelAr: string; labelFr: string; emoji: string }[];
   onViewReceipt?: (income: Income) => void;
+  onUploadInvoice?: (expenseId: string, base64: string) => void;
 }
 
 export default function TransactionsList({
@@ -25,7 +26,8 @@ export default function TransactionsList({
   onCancelIncome,
   onApproveExpense,
   categories = CATEGORIES_LIST,
-  onViewReceipt
+  onViewReceipt,
+  onUploadInvoice
 }: TransactionsListProps) {
   const [filterType, setFilterType] = useState<"all" | "incomes" | "expenses">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -299,30 +301,75 @@ export default function TransactionsList({
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1">
-                          {/* Invoice indicator */}
-                          <span className={`text-3xs px-1.5 py-0.5 rounded font-bold ${
-                            (item as Expense).invoiceStatus === "existing" 
-                              ? "bg-emerald-100 text-emerald-850 dark:bg-emerald-950/40 dark:text-emerald-300" 
-                              : (item as Expense).invoiceStatus === "way" 
-                                ? "bg-amber-100 text-amber-850" 
-                                : "bg-rose-100 text-rose-850"
-                          }`}>
-                            {(item as Expense).invoiceStatus === "existing" 
-                              ? (locale === "ar" ? "موجودة" : "Présent") 
-                              : (item as Expense).invoiceStatus === "way" 
-                                ? (locale === "ar" ? "في الطريق" : "En cours") 
-                                : (locale === "ar" ? "مفقودة" : "Manquant")}
+                        <div className="flex flex-col items-start gap-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {/* Invoice indicator */}
+                            <span className={`text-3xs px-1.5 py-0.5 rounded font-bold ${
+                              (item as Expense).invoiceImage 
+                                ? "bg-emerald-100 text-emerald-850 dark:bg-emerald-950/40 dark:text-emerald-300" 
+                                : (item as Expense).invoiceStatus === "way" 
+                                  ? "bg-amber-100 text-amber-850" 
+                                  : "bg-rose-100 text-rose-850"
+                            }`}>
+                              {(item as Expense).invoiceImage 
+                                ? (locale === "ar" ? "موجودة" : "Présent") 
+                                : (item as Expense).invoiceStatus === "way" 
+                                  ? (locale === "ar" ? "في الطريق" : "En cours") 
+                                  : (locale === "ar" ? "مفقودة" : "Manquant")}
+                            </span>
+                            {(item as Expense).invoiceImage ? (
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  onClick={() => setSelectedInvoiceImg((item as Expense).invoiceImage || null)}
+                                  className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 p-1 rounded bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200"
+                                  title={locale === "ar" ? "عرض الفاتورة" : "Voir"}
+                                >
+                                  <Camera className="w-3.5 h-3.5" />
+                                </button>
+                                <a 
+                                  href={(item as Expense).invoiceImage}
+                                  download={`فاتورة_${(item as Expense).invoiceCode || "expense"}.png`}
+                                  className="text-blue-700 hover:text-blue-900 dark:text-blue-400 p-1 rounded bg-blue-50 dark:bg-blue-950/30 border border-blue-200"
+                                  title={locale === "ar" ? "تحميل الفاتورة" : "Télécharger"}
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            ) : (
+                              <div>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  id={`file-upload-${item.id}`}
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file && onUploadInvoice) {
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        onUploadInvoice(item.id, reader.result as string);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={() => document.getElementById(`file-upload-${item.id}`)?.click()}
+                                  className="text-amber-800 hover:text-amber-900 dark:text-amber-400 p-1 rounded bg-amber-50 dark:bg-amber-955/20 border border-amber-200 text-[10px] font-extrabold flex items-center gap-0.5"
+                                  title={locale === "ar" ? "إرفاق فاتورة" : "Joindre"}
+                                >
+                                  <Upload className="w-3 h-3" />
+                                  <span>{locale === "ar" ? "إرفاق" : "Joindre"}</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <span 
+                            className="bg-amber-50 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-900 text-amber-850 dark:text-amber-350 text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded block whitespace-nowrap"
+                            title={locale === "ar" ? "اكتب هذا الرمز الفريد على الفاتورة الورقية" : "Code unique à écrire sur papier"}
+                          >
+                            🏷️ {(item as Expense).invoiceCode || "F-26-???"}
                           </span>
-                          {(item as Expense).invoiceImage && (
-                            <button 
-                              onClick={() => setSelectedInvoiceImg((item as Expense).invoiceImage || null)}
-                              className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 p-0.5 rounded"
-                              title="عرض الفاتورة"
-                            >
-                              <Camera className="w-3.5 h-3.5" />
-                            </button>
-                          )}
                         </div>
                       )}
                     </td>
@@ -435,11 +482,16 @@ export default function TransactionsList({
                       {isInc ? (locale === "ar" ? "مداخيل 💰" : "Recette") : (categoryObj?.labelAr || "مصروف 💸")}
                     </span>
                     {!isInc && (
-                      <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded ${
-                        (item as Expense).invoiceStatus === "existing" ? "bg-emerald-100 text-emerald-850" : "bg-rose-100 text-rose-850"
-                      }`}>
-                        {(item as Expense).invoiceStatus === "existing" ? (locale === "ar" ? "فاتورة" : "Facture") : (locale === "ar" ? "بلا فاتورة" : "Sans doc")}
-                      </span>
+                      <>
+                        <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded ${
+                          (item as Expense).invoiceImage ? "bg-emerald-100 text-emerald-850" : "bg-rose-100 text-rose-850"
+                        }`}>
+                          {(item as Expense).invoiceImage ? (locale === "ar" ? "فاتورة" : "Facture") : (locale === "ar" ? "بلا فاتورة" : "Sans doc")}
+                        </span>
+                        <span className="text-[9px] font-mono font-extrabold text-amber-850 bg-amber-50 dark:bg-amber-950/25 border border-amber-250 dark:border-amber-900 px-1 py-0.2 rounded mt-0.5">
+                          🏷️ {(item as Expense).invoiceCode || "F-26-???"}
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>
@@ -451,7 +503,7 @@ export default function TransactionsList({
                 )}
 
                 {/* Mobile actions row */}
-                <div className="flex items-center justify-end gap-2 pt-1 border-t dark:border-zinc-900 border-zinc-100">
+                <div className="flex items-center justify-end gap-2 pt-1 border-t dark:border-zinc-900 border-zinc-100 flex-wrap">
                   {isInc && !isCancelled && (
                     <button
                       onClick={() => onViewReceipt && onViewReceipt(item as Income)}
@@ -459,6 +511,58 @@ export default function TransactionsList({
                     >
                       {locale === "ar" ? "طباعة ومشاركة الوصل 📄" : "Imprimer Reçu 📄"}
                     </button>
+                  )}
+                  {!isInc && !isCancelled && (
+                    <div className="flex items-center gap-1 mr-auto">
+                      {(item as Expense).invoiceImage ? (
+                        <>
+                          <button 
+                            onClick={() => setSelectedInvoiceImg((item as Expense).invoiceImage || null)}
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-850 font-extrabold text-3xs px-1.5 py-1 rounded border border-emerald-150 flex items-center gap-0.5 shadow-sm"
+                            title={locale === "ar" ? "عرض الفاتورة" : "Aperçu"}
+                          >
+                            <Camera className="w-3 h-3" />
+                            <span>{locale === "ar" ? "معاينة" : "Voir"}</span>
+                          </button>
+                          <a 
+                            href={(item as Expense).invoiceImage}
+                            download={`فاتورة_${(item as Expense).invoiceCode || "expense"}.png`}
+                            className="bg-blue-50 hover:bg-blue-105 text-blue-800 font-extrabold text-3xs px-1.5 py-1 rounded border border-blue-150 flex items-center gap-0.5 shadow-sm"
+                            title={locale === "ar" ? "تحميل الفاتورة" : "Télécharger"}
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>{locale === "ar" ? "تحميل" : "Télécharger"}</span>
+                          </a>
+                        </>
+                      ) : (
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            id={`file-upload-mobile-${item.id}`}
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file && onUploadInvoice) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  onUploadInvoice(item.id, reader.result as string);
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          <button 
+                            onClick={() => document.getElementById(`file-upload-mobile-${item.id}`)?.click()}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-850 font-extrabold text-3xs px-1.5 py-1 rounded border border-amber-200 flex items-center gap-0.5 shadow-sm"
+                            title={locale === "ar" ? "إضافة وثيقة" : "Joindre"}
+                          >
+                            <Upload className="w-3 h-3" />
+                            <span>{locale === "ar" ? "إرفاق" : "Joindre"}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                   {isLeader && !isInc && (item as Expense).status === "pending_approval" && !isCancelled && (
                     <button 
@@ -518,6 +622,16 @@ export default function TransactionsList({
                 alt="Receipt screenshot"
                 referrerPolicy="no-referrer"
               />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <a
+                href={selectedInvoiceImg}
+                download={`فاتورة_كشافة_${Date.now()}.png`}
+                className="bg-emerald-800 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-4 rounded-xl flex items-center gap-1.5 transition shadow"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{locale === "ar" ? "تحميل الوثيقة الآن" : "Télécharger"}</span>
+              </a>
             </div>
           </div>
         </div>

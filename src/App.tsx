@@ -76,6 +76,10 @@ export default function App() {
     return localStorage.getItem("scout_troop_stamp") || null;
   });
 
+  const [troopSignature, setTroopSignature] = useState<string | null>(() => {
+    return localStorage.getItem("scout_troop_signature") || null;
+  });
+
   // Receipt Modal State
   const [selectedReceiptIncome, setSelectedReceiptIncome] = useState<Income | null>(null);
 
@@ -94,6 +98,25 @@ export default function App() {
   const [expInvoiceStatus, setExpInvoiceStatus] = useState<"existing" | "missing" | "way">("existing");
   const [expInvoiceImage, setExpInvoiceImage] = useState<string | null>(null);
   const [expNote, setExpNote] = useState("");
+  const [expInvoiceCode, setExpInvoiceCode] = useState("");
+
+  // Generate unique invoice code when showExpenseModal is toggled
+  useEffect(() => {
+    if (showExpenseModal && !expInvoiceCode) {
+      let nextNum = 1;
+      expenses.forEach(e => {
+        if (e.invoiceCode && e.invoiceCode.startsWith("F-26-")) {
+          const numPart = e.invoiceCode.substring(5);
+          const parsed = parseInt(numPart, 10);
+          if (!isNaN(parsed) && parsed >= nextNum) {
+            nextNum = parsed + 1;
+          }
+        }
+      });
+      const paddedNum = String(nextNum).padStart(3, "0");
+      setExpInvoiceCode(`F-26-${paddedNum}`);
+    }
+  }, [showExpenseModal, expenses, expInvoiceCode]);
 
   // Quick Income Form Values
   const [incType, setIncType] = useState<IncomeType>("participation");
@@ -136,6 +159,14 @@ export default function App() {
   }, [troopStamp]);
 
   useEffect(() => {
+    if (troopSignature) {
+      localStorage.setItem("scout_troop_signature", troopSignature);
+    } else {
+      localStorage.removeItem("scout_troop_signature");
+    }
+  }, [troopSignature]);
+
+  useEffect(() => {
     if (currentUser) {
       localStorage.setItem("scout_current_user", JSON.stringify(currentUser));
     } else {
@@ -155,20 +186,27 @@ export default function App() {
 
   // Force clean slate for first load to remove any legacy dummy/mock data
   useEffect(() => {
-    const isCleaned = localStorage.getItem("scout_ledger_force_cleaned_final_v5");
+    const isCleaned = localStorage.getItem("scout_ledger_force_cleaned_final_v6");
     if (!isCleaned) {
       localStorage.removeItem("scout_scouts");
       localStorage.removeItem("scout_incomes");
       localStorage.removeItem("scout_expenses");
       localStorage.removeItem("scout_camp_setup");
+      localStorage.removeItem("scout_categories_v2");
+      localStorage.removeItem("scout_troop_stamp");
+      localStorage.removeItem("scout_troop_signature");
+      localStorage.removeItem("scout_current_user");
       
       // Update states
       setCampSetup(EMPTY_CAMP_SETUP);
       setScouts([]);
       setIncomes([]);
       setExpenses([]);
+      setTroopStamp(null);
+      setTroopSignature(null);
+      setCurrentUser(null);
       
-      localStorage.setItem("scout_ledger_force_cleaned_final_v5", "true");
+      localStorage.setItem("scout_ledger_force_cleaned_final_v6", "true");
     }
   }, [EMPTY_CAMP_SETUP]);
 
@@ -178,18 +216,38 @@ export default function App() {
 
   // Reset demo databases
   const handleResetDatabases = () => {
+    localStorage.setItem("scout_camp_setup", JSON.stringify(DEFAULT_CAMP_SETUP));
+    localStorage.setItem("scout_scouts", JSON.stringify(INITIAL_SCOUTS));
+    localStorage.setItem("scout_incomes", JSON.stringify(INITIAL_INCOMES));
+    localStorage.setItem("scout_expenses", JSON.stringify(INITIAL_EXPENSES));
+    localStorage.setItem("scout_categories_v2", JSON.stringify(CATEGORIES_LIST));
+    localStorage.removeItem("scout_troop_stamp");
+
     setCampSetup(DEFAULT_CAMP_SETUP);
     setScouts(INITIAL_SCOUTS);
     setIncomes(INITIAL_INCOMES);
     setExpenses(INITIAL_EXPENSES);
+    setCategories(CATEGORIES_LIST);
+    setTroopStamp(null);
+    alert(locale === "ar" ? "تم بنجاح تحميل البيانات التجريبية الشاملة!" : "Données de démonstration chargées avec succès !");
   };
 
   // Completely clear and set pristine empty state
   const handleClearAllData = () => {
+    localStorage.removeItem("scout_scouts");
+    localStorage.removeItem("scout_incomes");
+    localStorage.removeItem("scout_expenses");
+    localStorage.removeItem("scout_camp_setup");
+    localStorage.removeItem("scout_categories_v2");
+    localStorage.removeItem("scout_troop_stamp");
+
     setCampSetup(EMPTY_CAMP_SETUP);
     setScouts([]);
     setIncomes([]);
     setExpenses([]);
+    setCategories(CATEGORIES_LIST);
+    setTroopStamp(null);
+    alert(locale === "ar" ? "تم حذف قاعدة البيانات بالكامل وتصفير كل السجلات الكشفية بنجاح!" : "Base de données supprimée et vidée avec succès !");
   };
 
   // Login handler
@@ -329,6 +387,7 @@ export default function App() {
 
     const newExp: Expense = {
       id: `exp-man-${Date.now()}`,
+      invoiceCode: expInvoiceCode || `F-26-${String(expenses.length + 1).padStart(3, "0")}`,
       date: new Date().toISOString(),
       category: expCategory,
       description: expDesc || `قضاء مقتنيات بند ${expCategory}`,
@@ -354,6 +413,7 @@ export default function App() {
     setExpSupplier("");
     setExpNote("");
     setExpInvoiceImage(null);
+    setExpInvoiceCode("");
   };
 
   // Record an Income manually
@@ -442,6 +502,16 @@ export default function App() {
     setExpenses(prev => prev.map(e => e.id === id ? { ...e, status: "approved", authorizedBy: currentUser?.name || "القائد طارق" } : e));
   };
 
+  const handleUploadInvoice = (expenseId: string, base64: string) => {
+    setExpenses(prev => 
+      prev.map(exp => 
+        exp.id === expenseId 
+          ? { ...exp, invoiceImage: base64, invoiceStatus: "existing" as const } 
+          : exp
+      )
+    );
+  };
+
   // AI OCR callback: pre-fills and immediately inserts
   const handleOcrSuccess = (data: {
     supplier: string;
@@ -454,8 +524,21 @@ export default function App() {
     const requiresApproval = data.amount > campSetup.spendingLimitWithoutApproval;
     const isApprovalAuto = !requiresApproval || currentUser?.role === "treasurer";
 
+    let nextNum = 1;
+    expenses.forEach(e => {
+      if (e.invoiceCode && e.invoiceCode.startsWith("F-26-")) {
+        const numPart = e.invoiceCode.substring(5);
+        const parsed = parseInt(numPart, 10);
+        if (!isNaN(parsed) && parsed >= nextNum) {
+          nextNum = parsed + 1;
+        }
+      }
+    });
+    const autoCode = `F-26-${String(nextNum).padStart(3, "0")}`;
+
     const newExp: Expense = {
       id: `exp-ocr-${Date.now()}`,
+      invoiceCode: autoCode,
       date: data.date,
       category: data.category,
       description: data.description,
@@ -486,15 +569,28 @@ export default function App() {
       const requiresApproval = parsed.amount > campSetup.spendingLimitWithoutApproval;
       const isApprovalAuto = !requiresApproval || currentUser?.role === "treasurer";
 
+      let nextNum = 1;
+      expenses.forEach(e => {
+        if (e.invoiceCode && e.invoiceCode.startsWith("F-26-")) {
+          const numPart = e.invoiceCode.substring(5);
+          const parsed = parseInt(numPart, 10);
+          if (!isNaN(parsed) && parsed >= nextNum) {
+            nextNum = parsed + 1;
+          }
+        }
+      });
+      const autoCode = `F-26-${String(nextNum).padStart(3, "0")}`;
+
       const newExp: Expense = {
         id: `exp-voice-${Date.now()}`,
+        invoiceCode: autoCode,
         date: new Date().toISOString(),
         category: parsed.category || "misc",
         description: parsed.label,
         amount: parsed.amount,
         supplier: "مزود عام تونس",
         paidBy: currentUser?.name || "محلل الأوامر الصوتية",
-        authorizedBy: isApprovalAuto ? (currentUser?.name || "أمين صندوق الفوج") : "انتظار قائد الفوج",
+        authorizedBy: isApprovalAuto ? (currentUser?.name || "أمين المال") : "انتظار قائد النشاط",
         invoiceStatus: "missing",
         status: isApprovalAuto ? "approved" : "pending_approval",
         note: parsed.note || "أمر صوتي",
@@ -558,9 +654,7 @@ export default function App() {
                 >
                   <option value="">-- اختر الحساب الكشفي المعين --</option>
                   <option value="أمين المال">أمين المال (كامل الصلاحيات)</option>
-                  <option value="قائد الفوج">قائد الفوج (عرض وموافقات)</option>
-                  <option value="مسؤول النشاط">مسؤول النشاط (إدخال مبوب)</option>
-                  <option value="مراجع خارجي">مراجع خارجي (عرض فقط)</option>
+                  <option value="قائد النشاط">قائد النشاط (عرض وموافقات)</option>
                 </select>
               </div>
 
@@ -595,7 +689,7 @@ export default function App() {
                 <Languages className="w-3.5 h-3.5" />
                 <span>{locale === "ar" ? "Français" : "العربية"}</span>
               </button>
-              <span>{locale === "ar" ? "المنظمة الكشفية التونسية 🏕️" : "Scouts Tunisiens 🏕️"}</span>
+              <span>{locale === "ar" ? "الكشافة التونسية 🏕️" : "Scouts Tunisiens 🏕️"}</span>
             </div>
 
           </div>
@@ -656,7 +750,7 @@ export default function App() {
               <ShieldCheck className="w-4 h-4 text-amber-400" />
               <div>
                 <p className="text-white text-[11px] leading-tight truncate">{currentUser.name}</p>
-                <p className="text-[9px] text-emerald-355 font-bold block">{currentUser.role === "treasurer" ? "أمين مال" : currentUser.role === "leader" ? "قائد الفوج" : "مسؤول نشاط"}</p>
+                <p className="text-[9px] text-emerald-355 font-bold block">{currentUser.role === "treasurer" ? "أمين مال" : "قائد النشاط"}</p>
               </div>
             </div>
 
@@ -757,6 +851,7 @@ export default function App() {
             onApproveExpense={handleApproveExpense}
             categories={categories}
             onViewReceipt={setSelectedReceiptIncome}
+            onUploadInvoice={handleUploadInvoice}
           />
         )}
 
@@ -791,6 +886,7 @@ export default function App() {
             campSetup={campSetup}
             locale={locale}
             categories={categories}
+            troopSignature={troopSignature}
           />
         )}
 
@@ -810,6 +906,8 @@ export default function App() {
             onUpdateCategories={setCategories}
             troopStamp={troopStamp}
             onUpdateStamp={setTroopStamp}
+            troopSignature={troopSignature}
+            onUpdateSignature={setTroopSignature}
           />
         )}
 
@@ -857,16 +955,31 @@ export default function App() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-3xs text-zinc-450 mb-1">{locale === "ar" ? "اسم المورد / المتجر الفاتح" : "Magasin / Fournisseur"}</label>
-                <input 
-                  type="text"
-                  required
-                  placeholder=""
-                  className="w-full px-2.5 py-1.5 border rounded bg-zinc-50 dark:bg-zinc-955 dark:border-zinc-800 placeholder-zinc-400"
-                  value={expSupplier}
-                  onChange={(e) => setExpSupplier(e.target.value)}
-                />
+              <div className="grid grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-3xs mb-1 text-emerald-800 dark:text-emerald-400 font-black">
+                    {locale === "ar" ? "⚜️ رمز الفاتورة الفريد (يكتب ورقياً)" : "Code facture unique (à écrire)"}
+                  </label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder="مثال: F-26-008"
+                    className="w-full px-2.5 py-1.5 border rounded bg-amber-50/55 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 font-bold text-center text-zinc-800 dark:text-amber-200"
+                    value={expInvoiceCode}
+                    onChange={(e) => setExpInvoiceCode(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-3xs text-zinc-450 mb-1">{locale === "ar" ? "اسم المورد / المتجر الفاتح" : "Magasin / Fournisseur"}</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder=""
+                    className="w-full px-2.5 py-1.5 border rounded bg-zinc-50 dark:bg-zinc-955 dark:border-zinc-800 placeholder-zinc-400"
+                    value={expSupplier}
+                    onChange={(e) => setExpSupplier(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div>
@@ -1117,7 +1230,7 @@ export default function App() {
                 type="submit"
                 className="w-full bg-emerald-800 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl transition cursor-pointer"
               >
-                {locale === "ar" ? "قبط وإيداع المدخول وتوليد الوصل 📄" : "Valider & Imprimer Reçu"}
+                {locale === "ar" ? "قبض وإيداع المدخول وتوليد الوصل 📄" : "Valider & Imprimer Reçu"}
               </button>
             </form>
           </div>
@@ -1131,6 +1244,8 @@ export default function App() {
           locale={locale}
           troopStamp={troopStamp}
           onUploadStamp={setTroopStamp}
+          troopSignature={troopSignature}
+          troopName={campSetup.troopName}
           onClose={() => setSelectedReceiptIncome(null)}
         />
       )}
@@ -1138,7 +1253,7 @@ export default function App() {
       {/* Footer credits */}
       <footer className="bg-stone-100 dark:bg-zinc-900 border-t border-stone-200 dark:border-zinc-805 py-4 px-4 text-center text-3xs text-zinc-450/90 font-bold tracking-wider shrink-0 select-none">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
-          <span>{campSetup.campName || "فوج الكشافة"} - المنظمة الكشفية التونسية © 2026/2025</span>
+          <span>{campSetup.campName || "فوج الكشافة"} - الكشافة التونسية © 2026/2025</span>
           <span className="font-mono">مطور بكفاءة للعمل الأوفلاين 🏕️ Offline Compliant</span>
         </div>
       </footer>
