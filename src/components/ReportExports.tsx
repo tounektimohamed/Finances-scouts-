@@ -1156,29 +1156,29 @@ export default function ReportExports({
     <div className="space-y-6" id="report-view-root">
       
       {/* Upper selector & export trigger action row */}
-      <div className="bg-white dark:bg-zinc-950 p-5 rounded-2xl border border-zinc-150 dark:border-zinc-850 shadow-3xs flex flex-wrap justify-between items-center gap-4">
+      <div className="bg-white dark:bg-zinc-950 p-4 sm:p-5 rounded-2xl border border-zinc-150 dark:border-zinc-850 shadow-3xs flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
         
         {/* Report configuration segments */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <select 
             value={reportType}
             onChange={(e) => setReportType(e.target.value as ReportType)}
-            className="text-xs font-bold border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 rounded-lg px-3 py-2 text-zinc-800 dark:text-zinc-200 focus:outline-emerald-800"
+            className="text-xs font-bold border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 rounded-lg px-3 py-2.5 sm:py-2 text-zinc-800 dark:text-zinc-200 focus:outline-emerald-800 w-full sm:w-auto"
           >
-            <option value="official">{locale === "ar" ? "⚜️ الكشف المالي الإجمالي الرسمي (ص. 23 - 24)" : "Modèle Officiel p. 23 - 24"}</option>
-            <option value="all_operations">{locale === "ar" ? "📊 التقرير التاريخي المفصل الموحد بجميع العمليات والتقرير المالي الجملي" : "Rapport chronologique détaillé & Bilan complet"}</option>
-            <option value="final">{locale === "ar" ? "📋 التقرير الختامي الشامل" : "Rapport final de clôture"}</option>
-            <option value="ledger">{locale === "ar" ? "📖 كشف الحساب العام" : "Grand livre général"}</option>
-            <option value="daily">{locale === "ar" ? "📅 تقرير مالي يومي" : "Rapport journalier"}</option>
-            <option value="category">{locale === "ar" ? "🍞 تقرير بند ميزانية محدد" : "Rapport analytique"}</option>
-            <option value="scouts">{locale === "ar" ? "🧍 كشف دفع المشاركين" : "Paiements des scouts"}</option>
+            <option value="official">{locale === "ar" ? "⚜️ الكشف المالي الرسمي (ص. 23-24)" : "Officiel p. 23-24"}</option>
+            <option value="all_operations">{locale === "ar" ? "📊 التقرير التاريخي المفصل" : "Chronologique détaillé"}</option>
+            <option value="final">{locale === "ar" ? "📋 التقرير الختامي" : "Rapport final"}</option>
+            <option value="ledger">{locale === "ar" ? "📖 كشف الحساب العام" : "Grand livre"}</option>
+            <option value="daily">{locale === "ar" ? "📅 تقرير يومي" : "Journalier"}</option>
+            <option value="category">{locale === "ar" ? "🍞 تقرير بند ميزانية" : "Analytique"}</option>
+            <option value="scouts">{locale === "ar" ? "🧍 كشف دفع المشاركين" : "Scouts"}</option>
           </select>
 
           {/* Sub controllers */}
           {reportType === "daily" && (
             <input 
               type="date"
-              className="text-xs font-bold border rounded-lg px-3 py-1.5 bg-zinc-50 text-zinc-800 focus:outline-emerald-800"
+              className="text-xs font-bold border rounded-lg px-3 py-2.5 sm:py-1.5 bg-zinc-50 text-zinc-800 focus:outline-emerald-800 w-full sm:w-auto"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
@@ -1188,7 +1188,7 @@ export default function ReportExports({
             <select 
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value as ExpenseCategoryCode)}
-              className="text-xs font-bold border rounded-lg px-3 py-1.5 bg-zinc-50 text-zinc-800 focus:outline-emerald-850"
+              className="text-xs font-bold border rounded-lg px-3 py-2.5 sm:py-1.5 bg-zinc-50 text-zinc-800 focus:outline-emerald-850 w-full sm:w-auto"
             >
               {categories.map(cat => (
                 <option key={cat.code} value={cat.code}>
@@ -1200,46 +1200,48 @@ export default function ReportExports({
         </div>
 
         {/* Action triggers */}
-        <div className="flex flex-wrap gap-2.5">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={handlePrint}
-            className="bg-emerald-800 hover:bg-emerald-700 text-white text-3xs font-black uppercase tracking-wider px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
-            title="طباعة التقرير أو كراسة الصندوق"
+            className="bg-emerald-800 hover:bg-emerald-700 text-white text-3xs font-black uppercase tracking-wider px-3 py-2 rounded-lg flex items-center gap-1.5 transition flex-1 sm:flex-none justify-center"
           >
-            <Printer className="w-4 h-4" />
-            <span>{locale === "ar" ? "معاينة الطباعة 🖨️" : "Aperçu"}</span>
+            <Printer className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{locale === "ar" ? "طباعة 🖨️" : "Aperçu"}</span>
+            <span className="sm:hidden">{locale === "ar" ? "طباعة" : "Print"}</span>
           </button>
 
           <button 
             onClick={handleDownloadReportHTML}
-            className="bg-amber-600 hover:bg-amber-700 text-white text-3xs font-black uppercase tracking-wider px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
-            title={locale === "ar" ? "تصدير التقرير كملف HTML مستقل ومطوّر لتفادي مشاكل الحظر للطباعة" : "Exporter le rapport HTML indépendant pour imprimer"}
+            className="bg-amber-600 hover:bg-amber-700 text-white text-3xs font-black uppercase tracking-wider px-3 py-2 rounded-lg flex items-center gap-1.5 transition flex-1 sm:flex-none justify-center"
           >
-            <Download className="w-4 h-4" />
-            <span>{locale === "ar" ? "تصدير HTML للطباعة كـ PDF 📥" : "HTML Prêt à Imprimer"}</span>
+            <Download className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{locale === "ar" ? "تصدير HTML 📥" : "HTML"}</span>
+            <span className="sm:hidden">{locale === "ar" ? "HTML" : "Export"}</span>
           </button>
 
           <button 
             onClick={handleExportCSV}
-            className="bg-zinc-100 dark:bg-zinc-900 border dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-3xs font-black uppercase tracking-wider px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
+            className="bg-zinc-100 dark:bg-zinc-900 border dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-3xs font-black uppercase tracking-wider px-3 py-2 rounded-lg flex items-center gap-1.5 transition flex-1 sm:flex-none justify-center"
           >
-            <Download className="w-4 h-4" />
-            <span>{locale === "ar" ? "تصدير Excel" : "Excel (CSV)"}</span>
+            <Download className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{locale === "ar" ? "Excel CSV" : "Excel CSV"}</span>
+            <span className="sm:hidden">CSV</span>
           </button>
 
           <button 
             onClick={handleWhatsAppShare}
-            className="bg-[#25D366] text-white hover:bg-emerald-600 text-3xs font-black px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition"
+            className="bg-[#25D366] text-white hover:bg-emerald-600 text-3xs font-black px-3 py-2 rounded-lg flex items-center gap-1.5 transition flex-1 sm:flex-none justify-center"
           >
-            <Share2 className="w-4 h-4" />
-            <span>{locale === "ar" ? "مشاركة القيادة" : "Partager"}</span>
+            <Share2 className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">{locale === "ar" ? "مشاركة" : "Partager"}</span>
+            <span className="sm:hidden">{locale === "ar" ? "مشاركة" : "Share"}</span>
           </button>
         </div>
 
       </div>
 
       {/* 🧾 Document Report Box (Styled beautifully for printable rendering) */}
-      <div className={`${reportType === "official" ? "p-0 border-none bg-transparent dark:bg-transparent" : "bg-white dark:bg-zinc-1000 border border-zinc-200 dark:border-zinc-900 rounded-3xl p-8 shadow-sm space-y-6"} text-right relative printable-area text-zinc-800 dark:text-zinc-200`}>
+      <div className={`${reportType === "official" ? "p-0 border-none bg-transparent dark:bg-transparent" : "bg-white dark:bg-zinc-1000 border border-zinc-200 dark:border-zinc-900 rounded-3xl p-4 sm:p-8 shadow-sm space-y-6"} text-right relative printable-area text-zinc-800 dark:text-zinc-200`}>
         
         {reportType === "official" ? (
           <OfficialBookletReport

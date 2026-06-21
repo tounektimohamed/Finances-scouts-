@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Expense, Income, Scout, CampSetup } from "../types";
+import { calculateCampDays } from "../utils/helpers";
 
 interface OfficialBookletReportProps {
   expenses: Expense[];
@@ -26,21 +27,18 @@ export default function OfficialBookletReport({
   currentBalance,
   troopSignature = null,
 }: OfficialBookletReportProps) {
-  // Official Booklet Editable Fields (internal states)
-  const [activityType, setActivityType] = useState<string>("مخيم صيفي كشفي");
-  const [structureName, setStructureName] = useState<string>("فوج الكشافة");
-  const [activityTarget, setActivityTarget] = useState<string>("فرقة الكشافة والفتيان");
-  const [sessionName, setSessionName] = useState<string>("دورة 2026");
-  const [cityName, setCityName] = useState<string>(campSetup.campName.includes("عين دراهم") ? "عين دراهم" : "مركز التخييم الكشفي");
-  const [daysCount, setDaysCount] = useState<number>(10);
-  const [leaderCountNum, setLeaderCountNum] = useState<number>(campSetup.leaderCount || 8);
-  const [staffCount, setStaffCount] = useState<number>(3);
-  
-  // Signatures
+  // Only keep truly manual fields for signatures and counts
   const [leaderName, setLeaderName] = useState<string>("القائد طارق بن عمار");
   const [leaderTitle, setLeaderTitle] = useState<string>("قائد النشاط");
   const [treasurerName, setTreasurerName] = useState<string>("القائد علي النفزي");
   const [treasurerTitle, setTreasurerTitle] = useState<string>("مقتصد النشاط");
+  const [leaderCountNum, setLeaderCountNum] = useState<number>(campSetup.leaderCount || 0);
+  const [staffCount, setStaffCount] = useState<number>(0);
+
+  // All other fields are derived dynamically from the app data
+  const campDays = calculateCampDays(campSetup.startDate, campSetup.endDate);
+  const scoutCount = scouts.length > 0 ? scouts.length : campSetup.scoutCount;
+  const totalPersons = scoutCount + leaderCountNum + staffCount;
 
   // Helper calculations for 9 official categories
   const getCategorySum = (code: string) => {
@@ -97,42 +95,29 @@ export default function OfficialBookletReport({
     <div className="space-y-12 text-zinc-800 dark:text-zinc-100" id="official-pages-container">
       
       {/* Dynamic Expose editable values trigger for parent sharing */}
-      <span className="hidden" data-activity-type={activityType} data-structure-name={structureName} data-activity-target={activityTarget} data-session-name={sessionName} data-city-name={cityName} data-days-count={daysCount} data-leader-count={leaderCountNum} data-staff-count={staffCount} data-leader-name={leaderName} data-leader-title={leaderTitle} data-treasurer-name={treasurerName} data-treasurer-title={treasurerTitle} id="official-meta-holder"></span>
+      <span className="hidden" data-activity-type={campSetup.campName} data-structure-name={campSetup.troopName || "فوج الكشافة"} data-activity-target={campSetup.campName} data-session-name={`دورة ${new Date(campSetup.startDate).getFullYear()}`} data-city-name={(() => { try { const parts = campSetup.campName.split("-"); return parts.length > 1 ? parts[parts.length-1].trim() : campSetup.campName; } catch { return campSetup.campName; } })()} data-days-count={campDays} data-leader-count={campSetup.leaderCount} data-staff-count={0} data-leader-name={leaderName} data-leader-title={leaderTitle} data-treasurer-name={treasurerName} data-treasurer-title={treasurerTitle} id="official-meta-holder"></span>
 
-      {/* ONLINE INTERACTIVE EDIT PANEL HEADER */}
-      <div className="bg-amber-50/75 dark:bg-zinc-900/60 p-5 rounded-2xl border border-amber-200/50 dark:border-zinc-800 text-right space-y-3 no-print">
+      {/* Minimal edit panel for counts and signatures */}
+      <div className="bg-amber-50/75 dark:bg-zinc-900/60 p-4 rounded-2xl border border-amber-200/50 dark:border-zinc-800 text-right space-y-3 no-print">
         <h4 className="font-extrabold text-xs text-amber-800 flex items-center justify-start gap-1">
-          <span>⚙️ لوحة التعديل التفاعلي - كراس المالية الرسمي</span>
+          <span>⚙️ تعديل سريع للبيانات</span>
         </h4>
-        <p className="text-3xs text-zinc-500 font-medium">عدّل البيانات أدناه لتحديث الكراس مباشرة قبل الطباعة أو الحفظ كـ PDF:</p>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-2xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-2xs">
           <div>
-            <label className="block text-zinc-500 mb-1 font-bold">نوع النشاط</label>
-            <input type="text" value={activityType} onChange={e => setActivityType(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
+            <label className="block text-zinc-500 mb-1 font-bold">{locale === "ar" ? "عدد القادة" : "Nombre de chefs"}</label>
+            <input type="number" min="0" value={leaderCountNum} onChange={e => setLeaderCountNum(Math.max(0, Number(e.target.value)))} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
           </div>
           <div>
-            <label className="block text-zinc-500 mb-1 font-bold">الهيكل الكشفي</label>
-            <input type="text" value={structureName} onChange={e => setStructureName(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
+            <label className="block text-zinc-500 mb-1 font-bold">{locale === "ar" ? "الإطار المسير" : "Personnel encadrant"}</label>
+            <input type="number" min="0" value={staffCount} onChange={e => setStaffCount(Math.max(0, Number(e.target.value)))} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
           </div>
           <div>
-            <label className="block text-zinc-500 mb-1 font-bold">الدورة الكشفية</label>
-            <input type="text" value={sessionName} onChange={e => setSessionName(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
+            <label className="block text-zinc-500 mb-1 font-bold">{locale === "ar" ? "المقتصد" : "Trésorier"}</label>
+            <input type="text" value={treasurerName} onChange={e => setTreasurerName(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
           </div>
           <div>
-            <label className="block text-zinc-500 mb-1 font-bold">المكان والجهة</label>
-            <input type="text" value={cityName} onChange={e => setCityName(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
-          </div>
-          <div className="sm:col-span-2">
-            <label className="block text-zinc-500 mb-1 font-bold">مخيم / دورة لـ</label>
-            <input type="text" value={activityTarget} onChange={e => setActivityTarget(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 font-bold" />
-          </div>
-          <div>
-            <label className="block text-zinc-500 mb-1 font-bold">عدد الأيام</label>
-            <input type="number" value={daysCount} onChange={e => setDaysCount(Number(e.target.value))} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
-          </div>
-          <div>
-            <label className="block text-zinc-500 mb-1 font-bold">الإطار المسير</label>
-            <input type="number" value={staffCount} onChange={e => setStaffCount(Number(e.target.value))} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
+            <label className="block text-zinc-500 mb-1 font-bold">{locale === "ar" ? "قائد النشاط" : "Chef d'activité"}</label>
+            <input type="text" value={leaderName} onChange={e => setLeaderName(e.target.value)} className="w-full bg-white dark:bg-zinc-950 border rounded-lg px-2 py-1 text-center font-bold" />
           </div>
         </div>
       </div>
@@ -162,23 +147,23 @@ export default function OfficialBookletReport({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3.5 text-xs font-bold my-4">
           <div className="flex items-center gap-1">
             <span className="text-zinc-500 shrink-0">نوع النشاط :</span>
-            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{activityType}</span>
+            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{campSetup.campName}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-zinc-500 shrink-0">الدورة :</span>
-            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{sessionName}</span>
+            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">دورة {new Date(campSetup.startDate).getFullYear()}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-zinc-500 shrink-0">الهيكل لـ :</span>
-            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{structureName}</span>
+            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{campSetup.troopName || "فوج الكشافة"}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-zinc-500 shrink-0">المكان :</span>
-            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{cityName}</span>
+            <span className="border-b border-dashed border-zinc-400 flex-1 px-1 text-zinc-900 text-center font-black">{(() => { try { const parts = campSetup.campName.split("-"); return parts.length > 1 ? parts[parts.length-1].trim() : campSetup.campName; } catch { return campSetup.campName; } })()}</span>
           </div>
           <div className="flex items-center gap-1 md:col-span-2">
             <span className="text-zinc-500 shrink-0">مخيم / ملتقى / دورة تكوينية لـ :</span>
-            <span className="border-b border-dashed border-zinc-400 flex-1 px-2 text-zinc-900 font-black">{activityTarget}</span>
+            <span className="border-b border-dashed border-zinc-400 flex-1 px-2 text-zinc-900 font-black">{campSetup.campName}</span>
           </div>
           <div className="flex items-center gap-1 md:col-span-2 pb-2">
             <span className="text-zinc-500 shrink-0">التاريخ :</span>
@@ -193,7 +178,7 @@ export default function OfficialBookletReport({
         <div className="grid grid-cols-5 gap-2 text-center my-6">
           <div className="border border-emerald-900 rounded-lg p-2 bg-emerald-50/10">
             <p className="text-[9px] text-zinc-500 font-bold mb-1">عدد الأيام</p>
-            <p className="font-black text-sm text-zinc-800">{daysCount}</p>
+            <p className="font-black text-sm text-zinc-800">{campDays}</p>
           </div>
           <div className="border border-emerald-900 rounded-lg p-2 bg-emerald-50/10">
             <p className="text-[9px] text-zinc-500 font-bold mb-1">المشاركين</p>
@@ -209,7 +194,7 @@ export default function OfficialBookletReport({
           </div>
           <div className="border-2 border-emerald-900 bg-emerald-900 text-white rounded-lg p-2 flex flex-col justify-center">
             <p className="text-[9px] text-emerald-100 font-bold mb-1">العدد الجملي</p>
-            <p className="font-black text-sm">{(scouts.length > 0 ? scouts.length : campSetup.scoutCount) + leaderCountNum + staffCount}</p>
+            <p className="font-black text-sm">{totalPersons}</p>
           </div>
         </div>
 
