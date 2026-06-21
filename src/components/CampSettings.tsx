@@ -410,19 +410,53 @@ export default function CampSettings({
               {/* Total Estimated Budget calculated from individual category estimations */}
               {(() => {
                 const totalPlannedEst = categories.reduce((acc, cat) => acc + (plannedNode[cat.code] || 0), 0);
+                const proposedIncome = scoutCount * scoutFee;
+                const difference = proposedIncome - totalPlannedEst;
                 return (
-                  <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-800/40 flex justify-between items-center transition-all">
-                    <div className="block text-right">
-                      <span className="font-extrabold text-[11px] block">
-                        {locale === "ar" ? "⚜️ إجمالي الميزانية التقديرية الكلية الصادرة من التقديرات:" : "⚜️ Budget global prévisionnel cumulé :"}
-                      </span>
-                      <span className="text-4xs text-zinc-450 dark:text-zinc-500 font-sans mt-0.5 block">
-                        {locale === "ar" ? "(جمع تقديرات ميزانيات بنود التبويبات المحددة أدناه)" : "(Calculé automatiquement par somme des rubriques)"}
+                  <div className="space-y-3">
+                    <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400 rounded-xl border border-emerald-100 dark:border-emerald-800/40 flex justify-between items-center transition-all">
+                      <div className="block text-right">
+                        <span className="font-extrabold text-[11px] block">
+                          {locale === "ar" ? "⚜️ إجمالي الميزانية التقديرية الكلية الصادرة من التقديرات:" : "⚜️ Budget global prévisionnel cumulé :"}
+                        </span>
+                        <span className="text-4xs text-zinc-450 dark:text-zinc-500 font-sans mt-0.5 block">
+                          {locale === "ar" ? "(جمع تقديرات ميزانيات بنود التبويبات المحددة أدناه)" : "(Calculé automatiquement par somme des rubriques)"}
+                        </span>
+                      </div>
+                      <span className="font-black text-sm text-emerald-950 dark:text-white bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg shadow-3xs">
+                        {formatTND(totalPlannedEst, locale)}
                       </span>
                     </div>
-                    <span className="font-black text-sm text-emerald-950 dark:text-white bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg shadow-3xs">
-                      {formatTND(totalPlannedEst, locale)}
-                    </span>
+
+                    <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-400 rounded-xl border border-amber-100 dark:border-amber-800/40 flex justify-between items-center transition-all">
+                      <div className="block text-right">
+                        <span className="font-extrabold text-[11px] block">
+                          {locale === "ar" ? "💰 المبلغ المقترح (عدد الكشاف × معلوم الاشتراك):" : "💰 Montant proposé (scouts × frais de participation) :"}
+                        </span>
+                        <span className="text-4xs text-zinc-450 dark:text-zinc-500 font-sans mt-0.5 block">
+                          {locale === "ar" ? `(${scoutCount} كشاف × ${scoutFee} د.ت للفرد)` : `(${scoutCount} scouts × ${scoutFee} TND/ scout)`}
+                        </span>
+                      </div>
+                      <span className="font-black text-sm text-amber-950 dark:text-white bg-white dark:bg-zinc-900 border border-amber-200 dark:border-zinc-800 px-3 py-1.5 rounded-lg shadow-3xs">
+                        {formatTND(proposedIncome, locale)}
+                      </span>
+                    </div>
+
+                    <div className={`p-3.5 rounded-xl border flex justify-between items-center transition-all ${difference >= 0 ? 'bg-sky-50 dark:bg-sky-950/20 text-sky-800 dark:text-sky-400 border-sky-100 dark:border-sky-800/40' : 'bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-400 border-rose-100 dark:border-rose-800/40'}`}>
+                      <div className="block text-right">
+                        <span className="font-extrabold text-[11px] block">
+                          {locale === "ar" ? "📊 الفرق (المقترح - التقديرات):" : "📊 Écart (Proposé - Estimations) :"}
+                        </span>
+                        <span className="text-4xs text-zinc-450 dark:text-zinc-500 font-sans mt-0.5 block">
+                          {locale === "ar" 
+                            ? (difference >= 0 ? "فائض إيجابي ✓" : "عجز في الميزانية ⚠️") 
+                            : (difference >= 0 ? "Excédent positif ✓" : "Déficit budgétaire ⚠️")}
+                        </span>
+                      </div>
+                      <span className={`font-black text-sm bg-white dark:bg-zinc-900 border px-3 py-1.5 rounded-lg shadow-3xs ${difference >= 0 ? 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-zinc-800' : 'text-rose-700 dark:text-rose-400 border-rose-200 dark:border-zinc-800'}`}>
+                        {difference >= 0 ? '+' : ''}{formatTND(difference, locale)}
+                      </span>
+                    </div>
                   </div>
                 );
               })()}
