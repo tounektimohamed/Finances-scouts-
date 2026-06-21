@@ -74,6 +74,7 @@ export interface CampSetup {
   endDate: string;
   scoutCount: number;
   leaderCount: number;
+  externalGuidesCount: number;
   scoutFee: number; // typically 50 TND or custom
   plannedBudgets: Record<ExpenseCategoryCode, number>;
   spendingLimitWithoutApproval: number; // expenses > this need leader approval

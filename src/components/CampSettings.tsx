@@ -43,6 +43,7 @@ export default function CampSettings({
   const [endDate, setEndDate] = useState(campSetup.endDate);
   const [scoutCount, setScoutCount] = useState(campSetup.scoutCount);
   const [leaderCount, setLeaderCount] = useState(campSetup.leaderCount);
+  const [externalGuidesCount, setExternalGuidesCount] = useState(campSetup.externalGuidesCount || 0);
   const [scoutFee, setScoutFee] = useState(campSetup.scoutFee);
   const [spendingLimit, setSpendingLimit] = useState(campSetup.spendingLimitWithoutApproval);
   
@@ -170,6 +171,7 @@ export default function CampSettings({
       endDate,
       scoutCount,
       leaderCount,
+      externalGuidesCount,
       scoutFee,
       plannedBudgets: plannedNode,
       spendingLimitWithoutApproval: spendingLimit
@@ -253,12 +255,22 @@ export default function CampSettings({
               </div>
 
               <div>
-                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "عدد الكشافة المتوقعة بالمشاركة" : "Nombre de scouts"}</label>
+                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "عدد القادة المرافقين" : "Nombre de chefs encadrants"}</label>
                 <input 
                   type="number" 
                   className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800"
-                  value={scoutCount}
-                  onChange={(e) => setScoutCount(parseInt(e.target.value) || 0)}
+                  value={leaderCount}
+                  onChange={(e) => setLeaderCount(parseInt(e.target.value) || 0)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "عدد القادة الضيوف والمرشدين الخارجيين" : "Nombre de guides externes"}</label>
+                <input 
+                  type="number" 
+                  className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800"
+                  value={externalGuidesCount}
+                  onChange={(e) => setExternalGuidesCount(parseInt(e.target.value) || 0)}
                 />
               </div>
 

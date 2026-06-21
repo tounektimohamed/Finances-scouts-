@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Expense, Income, Scout, CampSetup } from "../types";
 import { calculateCampDays } from "../utils/helpers";
 
@@ -27,13 +27,27 @@ export default function OfficialBookletReport({
   currentBalance,
   troopSignature = null,
 }: OfficialBookletReportProps) {
-  // Only keep truly manual fields for signatures and counts
-  const [leaderName, setLeaderName] = useState<string>("القائد طارق بن عمار");
-  const [leaderTitle, setLeaderTitle] = useState<string>("قائد النشاط");
-  const [treasurerName, setTreasurerName] = useState<string>("القائد علي النفزي");
-  const [treasurerTitle, setTreasurerTitle] = useState<string>("مقتصد النشاط");
-  const [leaderCountNum, setLeaderCountNum] = useState<number>(campSetup.leaderCount || 0);
-  const [staffCount, setStaffCount] = useState<number>(0);
+  // Only keep truly manual fields for signatures and counts - persisted in localStorage
+  const [leaderName, setLeaderName] = useState<string>(() => localStorage.getItem("obook_leaderName") || "القائد طارق بن عمار");
+  const [leaderTitle, setLeaderTitle] = useState<string>(() => localStorage.getItem("obook_leaderTitle") || "قائد النشاط");
+  const [treasurerName, setTreasurerName] = useState<string>(() => localStorage.getItem("obook_treasurerName") || "القائد علي النفزي");
+  const [treasurerTitle, setTreasurerTitle] = useState<string>(() => localStorage.getItem("obook_treasurerTitle") || "مقتصد النشاط");
+  const [leaderCountNum, setLeaderCountNum] = useState<number>(() => {
+    const saved = localStorage.getItem("obook_leaderCount");
+    return saved ? parseInt(saved) : (campSetup.leaderCount || 0);
+  });
+  const [staffCount, setStaffCount] = useState<number>(() => {
+    const saved = localStorage.getItem("obook_staffCount");
+    return saved ? parseInt(saved) : (campSetup.externalGuidesCount || 0);
+  });
+
+  // Auto-persist to localStorage when values change
+  useEffect(() => { localStorage.setItem("obook_leaderName", leaderName); }, [leaderName]);
+  useEffect(() => { localStorage.setItem("obook_leaderTitle", leaderTitle); }, [leaderTitle]);
+  useEffect(() => { localStorage.setItem("obook_treasurerName", treasurerName); }, [treasurerName]);
+  useEffect(() => { localStorage.setItem("obook_treasurerTitle", treasurerTitle); }, [treasurerTitle]);
+  useEffect(() => { localStorage.setItem("obook_leaderCount", String(leaderCountNum)); }, [leaderCountNum]);
+  useEffect(() => { localStorage.setItem("obook_staffCount", String(staffCount)); }, [staffCount]);
 
   // All other fields are derived dynamically from the app data
   const campDays = calculateCampDays(campSetup.startDate, campSetup.endDate);

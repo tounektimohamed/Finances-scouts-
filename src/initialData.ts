@@ -12,6 +12,7 @@ export const DEFAULT_CAMP_SETUP: CampSetup = {
   endDate: "2026-07-10",
   scoutCount: 45,
   leaderCount: 8,
+  externalGuidesCount: 3,
   scoutFee: 60, // 60 TND per scout
   plannedBudgets: {
     nutrition: 1500,
@@ -33,6 +34,7 @@ export const EMPTY_CAMP_SETUP: CampSetup = {
   endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   scoutCount: 0,
   leaderCount: 0,
+  externalGuidesCount: 0,
   scoutFee: 50, // default 50 TND
   plannedBudgets: {
     nutrition: 0,
