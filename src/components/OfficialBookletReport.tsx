@@ -13,7 +13,8 @@ interface OfficialBookletReportProps {
   totalIncome: number;
   totalExpense: number;
   currentBalance: number;
-  troopSignature?: string | null;
+  leaderSignature?: string | null;
+  treasurerSignature?: string | null;
 }
 
 export default function OfficialBookletReport({
@@ -25,7 +26,8 @@ export default function OfficialBookletReport({
   totalIncome,
   totalExpense,
   currentBalance,
-  troopSignature = null,
+  leaderSignature = null,
+  treasurerSignature = null,
 }: OfficialBookletReportProps) {
   // Only keep truly manual fields for signatures and counts - persisted in localStorage
   const [leaderName, setLeaderName] = useState<string>(() => localStorage.getItem("obook_leaderName") || "القائد طارق بن عمار");
@@ -433,8 +435,8 @@ export default function OfficialBookletReport({
           <div className="space-y-1">
             <input type="text" value={treasurerTitle} onChange={e => setTreasurerTitle(e.target.value)} className="text-center font-black uppercase text-emerald-950 border-none bg-transparent focus:outline-none w-full" />
             <div className="flex flex-col items-center justify-center p-1 border border-zinc-200 border-dashed rounded-lg bg-white/40 h-20 relative overflow-hidden">
-              {troopSignature ? (
-                <img src={troopSignature} alt="Signature" className="max-h-[48px] object-contain mix-blend-multiply select-none" />
+              {treasurerSignature ? (
+                <img src={treasurerSignature} alt="Signature" className="max-h-[48px] object-contain mix-blend-multiply select-none" />
               ) : (
                 <span className="text-[8px] text-zinc-400 italic font-medium">مربع إمضاء وتأشيرة أمانة المال</span>
               )}
@@ -450,8 +452,8 @@ export default function OfficialBookletReport({
           <div className="space-y-1">
             <input type="text" value={leaderTitle} onChange={e => setLeaderTitle(e.target.value)} className="text-center font-black uppercase text-emerald-950 border-none bg-transparent focus:outline-none w-full" />
             <div className="flex flex-col items-center justify-center p-1 border border-zinc-200 border-dashed rounded-lg bg-white/40 h-20 relative overflow-hidden">
-              {troopSignature ? (
-                <img src={troopSignature} alt="Signature" className="max-h-[48px] object-contain mix-blend-multiply select-none" />
+              {leaderSignature ? (
+                <img src={leaderSignature} alt="Signature" className="max-h-[48px] object-contain mix-blend-multiply select-none" />
               ) : (
                 <span className="text-[8px] text-zinc-400 italic font-medium">مربع إمضاء وتأشيرة قيادة النشاط</span>
               )}

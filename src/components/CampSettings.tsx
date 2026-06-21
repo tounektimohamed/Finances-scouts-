@@ -16,8 +16,10 @@ interface CampSettingsProps {
   onUpdateCategories: (newCats: any[]) => void;
   troopStamp: string | null;
   onUpdateStamp: (stamp: string | null) => void;
-  troopSignature?: string | null;
-  onUpdateSignature?: (signature: string | null) => void;
+  leaderSignature?: string | null;
+  onUpdateLeaderSignature?: (signature: string | null) => void;
+  treasurerSignature?: string | null;
+  onUpdateTreasurerSignature?: (signature: string | null) => void;
 }
 
 export default function CampSettings({
@@ -32,8 +34,10 @@ export default function CampSettings({
   onUpdateCategories,
   troopStamp,
   onUpdateStamp,
-  troopSignature = null,
-  onUpdateSignature
+  leaderSignature = null,
+  onUpdateLeaderSignature,
+  treasurerSignature = null,
+  onUpdateTreasurerSignature
 }: CampSettingsProps) {
   
   // Local state for configuration form
@@ -59,109 +63,6 @@ export default function CampSettings({
     }));
   };
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const isDrawing = useRef(false);
-  const lastX = useRef(0);
-  const lastY = useRef(0);
-
-  const getCoordinates = (e: any) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
-    
-    // Support touches
-    if (e.touches && e.touches.length > 0) {
-      const touch = e.touches[0];
-      return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
-      };
-    }
-    
-    // Standard mouse position (or unified)
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-  };
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (e.cancelable) e.preventDefault();
-    const pos = getCoordinates(e);
-    isDrawing.current = true;
-    lastX.current = pos.x;
-    lastY.current = pos.y;
-    
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-      }
-    }
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing.current) return;
-    if (e.cancelable) e.preventDefault();
-    const pos = getCoordinates(e);
-    
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.strokeStyle = "#1b3a4b"; // Beautiful midnight blue ink
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        
-        ctx.beginPath();
-        ctx.moveTo(lastX.current, lastY.current);
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-        
-        lastX.current = pos.x;
-        lastY.current = pos.y;
-      }
-    }
-  };
-
-  const stopDrawing = () => {
-    isDrawing.current = false;
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-  };
-
-  const handleAdoptSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    // Check if empty
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const buffer = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
-    const isBlank = !buffer.some(color => color !== 0);
-    
-    if (isBlank) {
-      alert(locale === "ar" ? "الرجاء رسم توقيعك على المساحة المخصصة أولاً!" : "Veuillez dessiner votre signature avant de l'adopter.");
-      return;
-    }
-    
-    const dataUrl = canvas.toDataURL("image/png");
-    if (onUpdateSignature) {
-      onUpdateSignature(dataUrl);
-    }
-  };
-
   const handleSaveConfig = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateSetup({
@@ -177,6 +78,121 @@ export default function CampSettings({
       spendingLimitWithoutApproval: spendingLimit
     });
   };
+
+  function SignaturePad({ currentSig, onSave, label }: { currentSig: string | null | undefined; onSave?: (sig: string | null) => void; label: string }) {
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const isDrawing = useRef(false);
+    const lastX = useRef(0);
+    const lastY = useRef(0);
+
+    const getCoordinates = (e: any) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return { x: 0, y: 0 };
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches && e.touches.length > 0) {
+        const touch = e.touches[0];
+        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+
+    const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      if (e.cancelable) e.preventDefault();
+      const pos = getCoordinates(e);
+      isDrawing.current = true;
+      lastX.current = pos.x;
+      lastY.current = pos.y;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) { ctx.beginPath(); ctx.moveTo(pos.x, pos.y); }
+      }
+    };
+
+    const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+      if (!isDrawing.current) return;
+      if (e.cancelable) e.preventDefault();
+      const pos = getCoordinates(e);
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.strokeStyle = "#1b3a4b";
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.moveTo(lastX.current, lastY.current);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+          lastX.current = pos.x;
+          lastY.current = pos.y;
+        }
+      }
+    };
+
+    const stopDrawing = () => { isDrawing.current = false; };
+
+    const clearCanvas = () => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    const handleAdopt = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !onSave) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const buffer = new Uint32Array(ctx.getImageData(0, 0, canvas.width, canvas.height).data.buffer);
+      if (!buffer.some(color => color !== 0)) {
+        alert(locale === "ar" ? "الرجاء رسم توقيعك أولاً!" : "Veuillez d'abord dessiner votre signature !");
+        return;
+      }
+      onSave(canvas.toDataURL("image/png"));
+    };
+
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="font-extrabold text-3xs text-emerald-950 dark:text-emerald-400">{label}</span>
+          {currentSig && onSave && (
+            <button type="button" onClick={() => onSave(null)} className="text-stone-400 hover:text-rose-650 font-extrabold text-[9px] underline cursor-pointer">
+              {locale === "ar" ? "إلغاء ✕" : "Réinitialiser ✕"}
+            </button>
+          )}
+        </div>
+        {currentSig ? (
+          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl flex flex-col items-center">
+            <div className="bg-stone-50/60 dark:bg-zinc-900 p-2 border border-dashed border-emerald-300 w-full h-16 flex items-center justify-center rounded-lg">
+              <img src={currentSig} alt="Signature" className="max-h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden relative">
+              <div className="absolute top-1.5 left-1.5 bg-zinc-105 dark:bg-zinc-900 rounded px-1.5 py-0.5 text-[8px] font-black text-zinc-400 pointer-events-none select-none uppercase">
+                {locale === "ar" ? "ارسم هنا" : "Dessinez ici"}
+              </div>
+              <canvas ref={canvasRef} width={350} height={100} className="w-full h-[100px] bg-zinc-50/40 dark:bg-zinc-900/45 cursor-crosshair block touch-none"
+                onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+                onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
+            </div>
+            <div className="flex gap-2 text-3xs font-black">
+              <button type="button" onClick={clearCanvas} className="flex-1 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-550 dark:text-zinc-300 py-1.5 rounded-lg transition">
+                🧹 {locale === "ar" ? "مسح" : "Effacer"}
+              </button>
+              <button type="button" onClick={handleAdopt} className="flex-1 bg-emerald-900 hover:bg-emerald-950 text-white py-1.5 rounded-lg transition">
+                ✨ {locale === "ar" ? "اعتماد" : "Adopter"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -342,70 +358,23 @@ export default function CampSettings({
               </div>
             </div>
 
-            {/* رسم واعتماد الإمضاء الكشفي الكروكي */}
-            <div className="p-4 bg-emerald-50/25 dark:bg-zinc-900 rounded-xl border border-emerald-100/75 dark:border-zinc-800 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-400">
-                  ✍️ {locale === "ar" ? "رسم وتثبيت إمضاء القائد / أمين المال" : "Dessiner & adopter la signature"}
-                </span>
-                {troopSignature && (
-                  <button
-                    type="button"
-                    onClick={() => onUpdateSignature && onUpdateSignature(null)}
-                    className="text-stone-400 hover:text-rose-650 font-extrabold text-[10px] underline cursor-pointer"
-                  >
-                    {locale === "ar" ? "إلغاء الإمضاء ✕" : "Réinitialiser ✕"}
-                  </button>
-                )}
+            {/* رسم واعتماد الإمضاءات الكشفية */}
+            <div className="p-4 bg-emerald-50/25 dark:bg-zinc-900 rounded-xl border border-emerald-100/75 dark:border-zinc-800 space-y-4">
+              <h4 className="font-extrabold text-xs text-emerald-950 dark:text-emerald-400">
+                ✍️ {locale === "ar" ? "إمضاءات القائد وأمين المال" : "Signatures du chef et du trésorier"}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <SignaturePad
+                  currentSig={leaderSignature}
+                  onSave={onUpdateLeaderSignature}
+                  label={locale === "ar" ? "✍️ إمضاء قائد النشاط" : "Signature du chef d'activité"}
+                />
+                <SignaturePad
+                  currentSig={treasurerSignature}
+                  onSave={onUpdateTreasurerSignature}
+                  label={locale === "ar" ? "✍️ إمضاء المقتصد / أمين المال" : "Signature du trésorier"}
+                />
               </div>
-
-              {troopSignature ? (
-                <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4 rounded-xl flex flex-col items-center justify-center space-y-2">
-                  <span className="text-[10px] text-zinc-405 font-bold block">{locale === "ar" ? "الإمضاء الرقمي المعتمد حالياً:" : "Signature adoptée :"}</span>
-                  <div className="bg-stone-50/60 dark:bg-zinc-900 p-2 border border-dashed border-emerald-300 w-full max-w-[280px] h-20 flex items-center justify-center rounded-lg">
-                    <img src={troopSignature} alt="Adopted Signature" className="max-h-full object-contain mix-blend-multiply dark:mix-blend-normal" />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden relative">
-                    <div className="absolute top-1.5 left-1.5 bg-zinc-105 dark:bg-zinc-900 rounded px-1.5 py-0.5 text-[8px] font-black text-zinc-400 pointer-events-none select-none uppercase">
-                      {locale === "ar" ? "رسم حر بالإصبع أو الفأرة" : "Tablette de dessin"}
-                    </div>
-                    
-                    <canvas
-                      ref={canvasRef}
-                      width={350}
-                      height={120}
-                      className="w-full h-[120px] bg-zinc-50/40 dark:bg-zinc-900/45 cursor-crosshair block touch-none"
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2 text-3xs font-black">
-                    <button
-                      type="button"
-                      onClick={clearCanvas}
-                      className="flex-1 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-550 dark:text-zinc-300 py-1.5 rounded-lg transition"
-                    >
-                      🧹 {locale === "ar" ? "مسح اللوحة" : "Effacer"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAdoptSignature}
-                      className="flex-1 bg-emerald-900 hover:bg-emerald-950 text-white py-1.5 rounded-lg transition"
-                    >
-                      ✨ {locale === "ar" ? "اعتماد حفظ التوقيع" : "Adopter la signature"}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Category planned budgets section */}

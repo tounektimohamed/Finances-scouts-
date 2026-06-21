@@ -12,7 +12,8 @@ interface ReportExportsProps {
   campSetup: CampSetup;
   locale: "ar" | "fr";
   categories?: { code: string; labelAr: string; labelFr: string; emoji: string }[];
-  troopSignature?: string | null;
+  leaderSignature?: string | null;
+  treasurerSignature?: string | null;
 }
 
 type ReportType = "daily" | "ledger" | "category" | "scouts" | "final" | "official" | "all_operations";
@@ -24,7 +25,8 @@ export default function ReportExports({
   campSetup,
   locale,
   categories = CATEGORIES_LIST,
-  troopSignature = null
+  leaderSignature = null,
+  treasurerSignature = null
 }: ReportExportsProps) {
   
   const [reportType, setReportType] = useState<ReportType>("final");
@@ -1255,7 +1257,8 @@ export default function ReportExports({
             totalIncome={totalIncome}
             totalExpense={totalExpense}
             currentBalance={currentBalance}
-            troopSignature={troopSignature}
+            leaderSignature={leaderSignature}
+            treasurerSignature={treasurerSignature}
           />
         ) : (
           <>

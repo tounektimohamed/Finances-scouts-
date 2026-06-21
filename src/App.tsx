@@ -53,7 +53,7 @@ export default function App() {
   const { incomes, upsertIncome, updateIncome } = useIncomesCollection();
   const { expenses, upsertExpense, updateExpense } = useExpensesCollection();
   const { categories, saveCategories } = useCategories();
-  const { stamp: troopStamp, signature: troopSignature, saveStamp: setTroopStamp, saveSignature: setTroopSignature } = useTroopImages();
+  const { stamp: troopStamp, leaderSignature, treasurerSignature, saveStamp: setTroopStamp, saveLeaderSignature: setLeaderSignature, saveTreasurerSignature: setTreasurerSignature } = useTroopImages();
 
   const [selectedReceiptIncome, setSelectedReceiptIncome] = useState<Income | null>(null);
   const [sendingStatus, setSendingStatus] = useState<string | null>(null);
@@ -469,6 +469,8 @@ export default function App() {
     await saveCampSetup(DEFAULT_CAMP_SETUP);
     await saveCategories(CATEGORIES_LIST);
     await setTroopStamp(null);
+    await setLeaderSignature(null);
+    await setTreasurerSignature(null);
     alert(locale === "ar" ? "تم بنجاح تحميل البيانات التجريبية الشاملة!" : "Données de démonstration chargées avec succès !");
   };
 
@@ -476,6 +478,8 @@ export default function App() {
     await saveCampSetup(EMPTY_CAMP_SETUP);
     await saveCategories(CATEGORIES_LIST);
     await setTroopStamp(null);
+    await setLeaderSignature(null);
+    await setTreasurerSignature(null);
     alert(locale === "ar" ? "تم حذف قاعدة البيانات بالكامل وتصفير كل السجلات الكشفية بنجاح!" : "Base de données supprimée et vidée avec succès !");
   };
 
@@ -725,7 +729,8 @@ export default function App() {
             campSetup={effectiveCampSetup}
             locale={locale}
             categories={categories}
-            troopSignature={troopSignature}
+            leaderSignature={leaderSignature}
+            treasurerSignature={treasurerSignature}
           />
         )}
 
@@ -745,8 +750,10 @@ export default function App() {
             onUpdateCategories={saveCategories}
             troopStamp={troopStamp}
             onUpdateStamp={setTroopStamp}
-            troopSignature={troopSignature}
-            onUpdateSignature={setTroopSignature}
+            leaderSignature={leaderSignature}
+            onUpdateLeaderSignature={setLeaderSignature}
+            treasurerSignature={treasurerSignature}
+            onUpdateTreasurerSignature={setTreasurerSignature}
           />
         )}
 
@@ -1075,7 +1082,7 @@ export default function App() {
           locale={locale}
           troopStamp={troopStamp}
           onUploadStamp={setTroopStamp}
-          troopSignature={troopSignature}
+          troopSignature={treasurerSignature}
           troopName={effectiveCampSetup.troopName}
           onClose={() => setSelectedReceiptIncome(null)}
         />

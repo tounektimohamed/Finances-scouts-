@@ -180,7 +180,8 @@ export function useExpensesCollection() {
 
 export function useTroopImages() {
   const [stamp, setStamp] = useState<string | null>(null);
-  const [signature, setSignature] = useState<string | null>(null);
+  const [leaderSignature, setLeaderSignature] = useState<string | null>(null);
+  const [treasurerSignature, setTreasurerSignature] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -188,7 +189,8 @@ export function useTroopImages() {
       if (snap.exists()) {
         const data = snap.data();
         setStamp(data.stamp || null);
-        setSignature(data.signature || null);
+        setLeaderSignature(data.leaderSignature || data.signature || null);
+        setTreasurerSignature(data.treasurerSignature || null);
       }
       setLoading(false);
     });
@@ -196,16 +198,21 @@ export function useTroopImages() {
   }, []);
 
   const saveStamp = useCallback(async (base64: string | null) => {
-    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp: base64, signature } as any), { merge: true });
+    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp: base64, leaderSignature, treasurerSignature } as any), { merge: true });
     setStamp(base64);
-  }, [signature]);
+  }, [leaderSignature, treasurerSignature]);
 
-  const saveSignature = useCallback(async (base64: string | null) => {
-    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp, signature: base64 } as any), { merge: true });
-    setSignature(base64);
-  }, [stamp]);
+  const saveLeaderSignature = useCallback(async (base64: string | null) => {
+    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp, leaderSignature: base64, treasurerSignature } as any), { merge: true });
+    setLeaderSignature(base64);
+  }, [stamp, treasurerSignature]);
 
-  return { stamp, signature, loading, saveStamp, saveSignature };
+  const saveTreasurerSignature = useCallback(async (base64: string | null) => {
+    await setDoc(doc(db, "troop", "images"), removeUndefined({ stamp, leaderSignature, treasurerSignature: base64 } as any), { merge: true });
+    setTreasurerSignature(base64);
+  }, [stamp, leaderSignature]);
+
+  return { stamp, leaderSignature, treasurerSignature, loading, saveStamp, saveLeaderSignature, saveTreasurerSignature };
 }
 
 export async function uploadImage(base64: string, path: string): Promise<string> {
