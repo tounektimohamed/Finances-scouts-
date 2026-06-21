@@ -50,6 +50,7 @@ export default function CampSettings({
   const [externalGuidesCount, setExternalGuidesCount] = useState(campSetup.externalGuidesCount || 0);
   const [scoutFee, setScoutFee] = useState(campSetup.scoutFee);
   const [spendingLimit, setSpendingLimit] = useState(campSetup.spendingLimitWithoutApproval);
+  const [showCatManager, setShowCatManager] = useState(false);
   
   // Categorized planned budget values
   const [plannedNode, setPlannedNode] = useState<Record<string, number>>({
@@ -237,6 +238,16 @@ export default function CampSettings({
                   className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800"
                   value={campName}
                   onChange={(e) => setCampName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-3xs font-extrabold text-zinc-550 mb-1">{locale === "ar" ? "عدد الكشافة المتوقعة بالمشاركة" : "Nombre de scouts participants"}</label>
+                <input 
+                  type="number" 
+                  className="w-full px-3 py-2 border dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 rounded-lg focus:outline-emerald-800"
+                  value={scoutCount}
+                  onChange={(e) => setScoutCount(parseInt(e.target.value) || 0)}
                 />
               </div>
 
@@ -460,13 +471,16 @@ export default function CampSettings({
             </div>
 
             {/* dynamic custom tab manager */}
+            {/* Collapsible: Custom categories manager */}
             <div className="space-y-4 pt-6 border-t dark:border-zinc-800">
-              <div className="flex justify-between items-center">
+              <button type="button" onClick={() => setShowCatManager(!showCatManager)} className="flex justify-between items-center w-full text-right">
                 <h4 className="font-extrabold text-xs text-emerald-800 dark:text-emerald-400">
                   {locale === "ar" ? "🛠️ إضافة وتخصيص تبويبات الدفتر الكشفي" : "🛠️ Gérer et Ajouter des Rubriques"}
                 </h4>
-              </div>
-              <p className="text-3xs text-zinc-400 leading-relaxed">
+                <span className={`text-2xs text-zinc-400 transition-transform ${showCatManager ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+              {showCatManager && (
+              <><p className="text-3xs text-zinc-400 leading-relaxed">
                 {locale === "ar" 
                   ? "يمكنك تعديل مسميات التبويبات المتوفرة أو إضافة بنود مخصصة صلب ميزانية المخيم (مثل التأمين، الهدايا، ورشات كشفية) فوراً، أو حذف التبويبات المضافة."
                   : "Personnalisez la nomenclature de vos charges : modifiez les rubriques existantes ou créez-en de nouvelles ou supprimez-les."}
@@ -615,7 +629,9 @@ export default function CampSettings({
                 </div>
 
               </div>
-            </div>
+            </>
+            )}
+          </div>
 
           </form>
         </div>

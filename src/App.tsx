@@ -1097,9 +1097,8 @@ export default function App() {
       )}
 
       <footer className="bg-stone-100 dark:bg-zinc-900 border-t border-stone-200 dark:border-zinc-805 py-4 px-4 text-center text-3xs text-zinc-450/90 font-bold tracking-wider shrink-0 select-none">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+        <div className="max-w-7xl mx-auto">
           <span>{effectiveCampSetup.campName || "فوج الكشافة"} - الكشافة التونسية © 2026/2025</span>
-          <span className="font-mono">مطور بكفاءة للعمل الأوفلاين 🏕️ Offline Compliant</span>
         </div>
       </footer>
 
